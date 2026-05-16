@@ -20,14 +20,8 @@ public class UserFollow {
   @Column(name = "follower_id", nullable = false)
   private Long followerId;
 
-  @Column(name = "follower_name", length = 64)
-  private String followerName;
-
   @Column(name = "following_id", nullable = false)
   private Long followingId;
-
-  @Column(name = "following_name", length = 64)
-  private String followingName;
 
   @Column(name = "created_at", nullable = false)
   private Instant createdAt;

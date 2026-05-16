@@ -7,6 +7,7 @@ import BookDetailView from '../views/BookDetailView.vue'
 import BooklistsView from '../views/BooklistsView.vue'
 import BooklistDetailView from '../views/BooklistDetailView.vue'
 import ActivitiesView from '../views/ActivitiesView.vue'
+import ActivityDetailView from '../views/ActivityDetailView.vue'
 import MyActivitiesView from '../views/MyActivitiesView.vue'
 import MessagesView from '../views/MessagesView.vue'
 import ProfileView from '../views/ProfileView.vue'
@@ -29,6 +30,7 @@ const router = createRouter({
     { path: '/booklists', name: 'booklists', component: BooklistsView },
     { path: '/booklists/:id', name: 'booklist-detail', component: BooklistDetailView },
     { path: '/activities', name: 'activities', component: ActivitiesView },
+    { path: '/activities/:id', name: 'activity-detail', component: ActivityDetailView },
     { path: '/my-activities', name: 'my-activities', component: MyActivitiesView },
     { path: '/messages', name: 'messages', component: MessagesView },
     { path: '/profile', name: 'profile', component: ProfileView },

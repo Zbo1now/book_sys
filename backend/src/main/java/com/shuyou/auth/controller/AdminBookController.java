@@ -4,6 +4,7 @@ import com.shuyou.auth.dto.AdminBookUpdateRequest;
 import com.shuyou.auth.dto.ApiResponse;
 import com.shuyou.auth.service.AdminService;
 import com.shuyou.auth.service.UserAuthService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +23,9 @@ import java.util.Map;
 public class AdminBookController {
   private final UserAuthService userAuthService;
   private final AdminService adminService;
+
+  @Value("${app.upload.base-dir:./uploads}")
+  private String uploadBaseDir;
 
   public AdminBookController(UserAuthService userAuthService, AdminService adminService) {
     this.userAuthService = userAuthService;
@@ -91,9 +95,8 @@ public class AdminBookController {
     String extension = original.contains(".") ? original.substring(original.lastIndexOf('.')).toLowerCase(Locale.ROOT) : ".jpg";
     String fileName = "book-cover-" + System.currentTimeMillis() + extension;
     try {
-      Path cwd = Paths.get("").toAbsolutePath().normalize();
-      // 保存到项目根目录的 uploads/photos 文件夹（持久化存储）
-      Path uploadsDir = cwd.resolve("uploads").resolve("photos").normalize();
+      Path base = Paths.get(uploadBaseDir).toAbsolutePath().normalize();
+      Path uploadsDir = base.resolve("photos").normalize();
       Files.createDirectories(uploadsDir);
       Path target = uploadsDir.resolve(fileName);
       Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);

@@ -76,6 +76,9 @@
         <div class="form-group">
           <input v-model.trim="createForm.description" placeholder="活动描述" />
         </div>
+        <div class="form-group">
+          <input v-model.number="createForm.maxParticipants" type="number" min="0" placeholder="参与人数上限(0不限)" class="small-input" />
+        </div>
         <div class="form-actions">
           <button class="btn primary small" @click="createActivity">新增活动</button>
         </div>
@@ -92,6 +95,7 @@
             <th>开始时间</th>
             <th>结束时间</th>
             <th>活动描述</th>
+            <th>人数上限</th>
             <th>参与人数</th>
             <th>审批状态</th>
             <th>状态</th>
@@ -110,6 +114,7 @@
             <td><input v-model="activity.startDate" type="datetime-local" class="datetime-input" /></td>
             <td><input v-model="activity.endDate" type="datetime-local" class="datetime-input" /></td>
             <td><input v-model.trim="activity.description" class="inline-input" /></td>
+            <td><input v-model.number="activity.maxParticipants" type="number" min="0" class="inline-input small-input" style="width:70px" /></td>
             <td>{{ activity.participantCount || 0 }}</td>
             <td>
               <span :class="['status-tag', activity.approvalStatus]">
@@ -121,7 +126,6 @@
               <button v-if="activity.approvalStatus === 'pending'" class="btn primary small" @click="approveActivity(activity.id)">通过</button>
               <button v-if="activity.approvalStatus === 'pending'" class="btn danger small" @click="rejectActivity(activity.id)">拒绝</button>
               <button class="btn ghost small" @click="saveActivity(activity.id)">保存</button>
-              <button class="btn ghost small" @click="advanceStatus(activity.id)">切换状态</button>
               <button class="btn danger small" @click="removeActivity(activity.id)">删除</button>
             </td>
           </tr>
@@ -138,7 +142,6 @@ import {
   deleteAdminActivity,
   fetchAdminActivities,
   updateAdminActivity,
-  updateAdminActivityStatus,
   type AdminActivityDto
 } from '../../api/admin'
 import { useAlert } from '../../composables/useAlert'
@@ -155,14 +158,14 @@ const locationFilter = ref('all')
 const keywordFilter = ref('')
 const startDateFilter = ref('')
 const endDateFilter = ref('')
-const statusOrder = ['upcoming', 'ongoing', 'ended']
 const locationOptions = ['线上', '线下']
 const createForm = ref({
   title: '',
   location: locationOptions[0],
   startDate: '',
   endDate: '',
-  description: ''
+  description: '',
+  maxParticipants: 0
 })
 
 const filteredActivities = computed(() => {
@@ -211,19 +214,6 @@ function formatStatus(status?: string) {
   return '即将开始'
 }
 
-async function advanceStatus(id: string) {
-  const target = activities.value.find((item) => item.id === id)
-  if (!target) return
-  const current = statusOrder.indexOf(target.status || 'upcoming')
-  const next = statusOrder[(current + 1) % statusOrder.length]
-  try {
-    const updated = await updateAdminActivityStatus(id, next)
-    Object.assign(target, updated, { statusLabel: formatStatus(updated.status) })
-  } catch (error: any) {
-    showAlert('状态更新失败: ' + (error?.message || '未知错误'), 'error')
-  }
-}
-
 async function saveActivity(id: string) {
   const target = activities.value.find((item) => item.id === id)
   if (!target) {
@@ -236,7 +226,8 @@ async function saveActivity(id: string) {
       location: target.location,
       startDate: target.startDate,
       endDate: target.endDate,
-      description: target.description
+      description: target.description,
+      maxParticipants: target.maxParticipants && target.maxParticipants > 0 ? target.maxParticipants : undefined
     })
     Object.assign(target, updated, { statusLabel: formatStatus(updated.status) })
     showAlert('保存成功', 'success')
@@ -299,14 +290,16 @@ async function createActivity() {
       location: createForm.value.location,
       startDate: createForm.value.startDate || undefined,
       endDate: createForm.value.endDate || undefined,
-      description: createForm.value.description
+      description: createForm.value.description,
+      maxParticipants: createForm.value.maxParticipants > 0 ? createForm.value.maxParticipants : undefined
     })
     createForm.value = {
       title: '',
       location: locationOptions[0],
       startDate: '',
       endDate: '',
-      description: ''
+      description: '',
+      maxParticipants: 0
     }
     await loadActivities()
   } catch (error: any) {

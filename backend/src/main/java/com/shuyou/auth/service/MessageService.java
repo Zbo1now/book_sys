@@ -85,7 +85,7 @@ public class MessageService {
     List<Map<String, Object>> msgList = messages.stream()
       .map(m -> Map.<String, Object>of(
         "id", m.getId(),
-        "sender", Map.of("id", "u-" + m.getSenderId(), "username", m.getSenderName() != null ? m.getSenderName() : ""),
+        "sender", Map.of("id", "u-" + m.getSenderId(), "username", userAccountRepository.findById(m.getSenderId()).map(UserAccount::getUsername).orElse("")),
         "content", m.getContent(),
         "timestamp", m.getCreatedAt().toString(),
         "isMine", m.getSenderId().equals(userId)
@@ -131,9 +131,7 @@ public class MessageService {
 
     PrivateMessage message = new PrivateMessage();
     message.setSenderId(sender.getId());
-    message.setSenderName(sender.getUsername());
     message.setReceiverId(receiverId);
-    message.setReceiverName(receiver.getUsername());
     message.setContent(request.content());
     message.setIsRead(false);
 
@@ -145,6 +143,11 @@ public class MessageService {
       "conversationId", "conv-" + receiverId,
       "timestamp", message.getCreatedAt().toString()
     );
+  }
+
+  public Map<String, Object> unreadCount(Long userId) {
+    long count = privateMessageRepository.countUnreadByReceiverId(userId);
+    return Map.of("count", count);
   }
 
   @Transactional

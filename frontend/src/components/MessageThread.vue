@@ -9,10 +9,11 @@
         @click="$emit('select', thread.id)"
       >
         <div class="thread-avatar">{{ thread.initials }}</div>
-        <div>
+        <div class="thread-info">
           <p class="thread-name">{{ thread.name }}</p>
           <p class="thread-preview">{{ thread.preview }}</p>
         </div>
+        <span v-if="thread.unreadCount && thread.unreadCount > 0" class="thread-badge">{{ thread.unreadCount > 99 ? '99+' : thread.unreadCount }}</span>
       </div>
       <div v-if="threads.length === 0" class="no-threads">
         暂无会话记录
@@ -73,6 +74,7 @@ interface ThreadItem {
   initials: string
   preview: string
   status: string
+  unreadCount?: number
   messages: MessageItem[]
   participantId?: string
 }
@@ -138,11 +140,31 @@ watch(() => activeThread.value?.messages.length, () => {
   cursor: pointer;
   border-radius: 8px;
   transition: background 0.2s;
+  align-items: center;
 }
 
 .thread-item:hover,
 .thread-item.active {
   background: var(--bg-secondary, #f5f5f5);
+}
+
+.thread-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.thread-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  border-radius: 10px;
+  flex-shrink: 0;
 }
 
 .thread-avatar {

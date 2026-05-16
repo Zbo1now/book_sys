@@ -2,7 +2,6 @@ package com.shuyou.auth.controller;
 
 import com.shuyou.auth.dto.ApiResponse;
 import com.shuyou.auth.dto.BookReviewRequest;
-import com.shuyou.auth.dto.RatingRequest;
 import com.shuyou.auth.entity.UserAccount;
 import com.shuyou.auth.service.BookService;
 import com.shuyou.auth.service.UserAuthService;
@@ -45,28 +44,6 @@ public class BookController {
   @GetMapping("/{bookId}")
   public ApiResponse<Map<String, Object>> detail(@PathVariable String bookId) {
     return ApiResponse.ok(bookService.detail(bookId));
-  }
-
-  @PostMapping("/{bookId}/collect")
-  public ApiResponse<Map<String, Object>> collect(@RequestHeader(value = "Authorization", required = false) String authorization,
-                                                   @PathVariable String bookId) {
-    UserAccount me = userAuthService.requireUser(authorization);
-    return ApiResponse.ok(bookService.collect(me.getId(), bookId));
-  }
-
-  @DeleteMapping("/{bookId}/collect")
-  public ApiResponse<Map<String, Object>> uncollect(@RequestHeader(value = "Authorization", required = false) String authorization,
-                                                     @PathVariable String bookId) {
-    UserAccount me = userAuthService.requireUser(authorization);
-    return ApiResponse.ok(bookService.uncollect(me.getId(), bookId));
-  }
-
-  @PostMapping("/{bookId}/rating")
-  public ApiResponse<Map<String, Object>> rating(@RequestHeader(value = "Authorization", required = false) String authorization,
-                                                  @PathVariable String bookId,
-                                                  @Valid @RequestBody RatingRequest request) {
-    userAuthService.requireUser(authorization);
-    return ApiResponse.ok(bookService.rating(bookId, request.rating(), request.review()));
   }
 
   @PostMapping("/{bookId}/reviews")

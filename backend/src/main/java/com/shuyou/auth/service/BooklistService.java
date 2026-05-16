@@ -99,11 +99,8 @@ public class BooklistService {
     item.setDescription(defaultIfBlank(request.description(), ""));
     item.setCoverUrl(resolveCover(request.cover()));
     item.setCreatorId(userId);
-    item.setCreatorName(username);
     item.setBookCodes(joinBookCodes(request.bookIds()));
     item.setBookCount(parseBookCodes(item.getBookCodes()).size());
-    item.setFollowerCount(0);
-    item.setLikeCount(0);
     item.setRating(0.0);
     item.setIsPublic(request.isPublic() == null || request.isPublic());
     booklistRepository.save(item);
@@ -149,12 +146,11 @@ public class BooklistService {
     BooklistComment comment = new BooklistComment();
     comment.setBooklistCode(id);
     comment.setUserId(actor.getId());
-    comment.setUsername(actor.getUsername());
     comment.setContent(request.content().trim());
     commentRepository.save(comment);
     return Map.of(
       "id", comment.getId() == null ? "" : String.valueOf(comment.getId()),
-      "username", comment.getUsername(),
+      "username", actor.getUsername(),
       "content", comment.getContent(),
       "createdAt", comment.getCreatedAt() == null ? "" : comment.getCreatedAt().toString()
     );
@@ -172,13 +168,10 @@ public class BooklistService {
       BooklistLike like = new BooklistLike();
       like.setBooklistCode(booklistId);
       like.setUserId(userId);
-      like.setUserName(username);
       likeRepository.save(like);
       liked = true;
     }
     long likeCount = likeRepository.countByBooklistCode(booklistId);
-    item.setLikeCount((int) likeCount);
-    booklistRepository.save(item);
     return Map.of("liked", liked, "likeCount", likeCount);
   }
 
@@ -197,9 +190,7 @@ public class BooklistService {
       followRepository.save(created);
       followed = true;
     }
-    int followerCount = (int) followRepository.countByBooklistCode(booklistId);
-    item.setFollowerCount(followerCount);
-    booklistRepository.save(item);
+    long followerCount = followRepository.countByBooklistCode(booklistId);
     return Map.of("followed", followed, "followerCount", followerCount);
   }
 
@@ -236,11 +227,11 @@ public class BooklistService {
     dto.put("title", item.getTitle());
     dto.put("description", defaultIfBlank(item.getDescription(), ""));
     dto.put("cover", resolveCover(item.getCoverUrl()));
-    dto.put("creator", Map.of("id", "u-" + item.getCreatorId(), "username", item.getCreatorName()));
+    dto.put("creator", Map.of("id", "u-" + item.getCreatorId(), "username", userAccountRepository.findById(item.getCreatorId()).map(UserAccount::getUsername).orElse("未知用户")));
     dto.put("bookCount", item.getBookCount() == null ? 0 : item.getBookCount());
     dto.put("bookIds", parseBookCodes(item.getBookCodes()));
-    dto.put("followers", item.getFollowerCount() == null ? 0 : item.getFollowerCount());
-    dto.put("likes", item.getLikeCount() == null ? 0 : item.getLikeCount());
+    dto.put("followers", (int) followRepository.countByBooklistCode(item.getCode()));
+    dto.put("likes", (int) likeRepository.countByBooklistCode(item.getCode()));
     dto.put("rating", item.getRating() == null ? 0 : item.getRating());
     dto.put("createdAt", item.getCreatedAt() == null ? "" : item.getCreatedAt().toString());
     dto.put("updatedAt", item.getUpdatedAt() == null ? "" : item.getUpdatedAt().toString());
@@ -333,7 +324,7 @@ public class BooklistService {
       .map(c -> {
         Map<String, Object> m = new java.util.LinkedHashMap<>();
         m.put("id", String.valueOf(c.getId()));
-        m.put("username", c.getUsername());
+        m.put("username", userAccountRepository.findById(c.getUserId()).map(UserAccount::getUsername).orElse("未知用户"));
         m.put("userId", "u-" + c.getUserId());
         m.put("content", c.getContent());
         m.put("createdAt", c.getCreatedAt() == null ? "" : c.getCreatedAt().toString());

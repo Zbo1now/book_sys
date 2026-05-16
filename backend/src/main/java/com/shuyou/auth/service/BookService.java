@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class BookService {
@@ -33,7 +32,6 @@ public class BookService {
   private final BookReviewRepository bookReviewRepository;
   private final BookReviewLikeRepository bookReviewLikeRepository;
   private final UserAccountRepository userAccountRepository;
-  private final Map<Long, Set<String>> collections = new ConcurrentHashMap<>();
 
   public BookService(BookRepository bookRepository,
                      BookReviewRepository bookReviewRepository,
@@ -63,7 +61,7 @@ public class BookService {
     map.put("id", review.getId());
     map.put("rating", review.getRating());
     map.put("content", review.getContent() == null ? "" : review.getContent());
-    map.put("userName", review.getUserName() == null ? "匿名用户" : review.getUserName());
+    map.put("userName", userAccountRepository.findById(review.getUserId()).map(UserAccount::getUsername).orElse("匿名用户"));
     map.put("userId", "u-" + review.getUserId());
     map.put("createdAt", review.getCreatedAt() != null ? review.getCreatedAt().toString() : Instant.now().toString());
     map.put("likeCount", bookReviewLikeRepository.countByReviewId(review.getId()));
@@ -154,18 +152,6 @@ public class BookService {
     return detail;
   }
 
-  public Map<String, Object> collect(Long userId, String bookId) {
-    log.info("User {} collecting book {}", userId, bookId);
-    collections.computeIfAbsent(userId, k -> ConcurrentHashMap.newKeySet()).add(bookId);
-    return Map.of("collected", true, "collectAt", Instant.now().toString());
-  }
-
-  public Map<String, Object> uncollect(Long userId, String bookId) {
-    log.info("User {} uncollecting book {}", userId, bookId);
-    collections.computeIfAbsent(userId, k -> ConcurrentHashMap.newKeySet()).remove(bookId);
-    return Map.of("collected", false);
-  }
-
   @Transactional
   public Map<String, Object> addReview(Long userId, String bookId, Double rating, String content) {
     log.info("User {} adding review for book {}", userId, bookId);
@@ -183,7 +169,6 @@ public class BookService {
 
     review.setRating(rating);
     review.setContent(content);
-    review.setUserName(user.getUsername());
     review.setUpdatedAt(Instant.now());
     if (review.getCreatedAt() == null) {
       review.setCreatedAt(Instant.now());
@@ -226,15 +211,6 @@ public class BookService {
       book.setReviews(reviewCount != null ? reviewCount.intValue() : 0);
       bookRepository.save(book);
     });
-  }
-
-  public Map<String, Object> rating(String bookId, Double rating, String review) {
-    return Map.of(
-      "id", "review-" + bookId,
-      "rating", rating,
-      "review", review == null ? "" : review,
-      "createdAt", Instant.now().toString()
-    );
   }
 
   private Map<String, Object> pagedData(Page<Book> pageData, int page, int pageSize) {

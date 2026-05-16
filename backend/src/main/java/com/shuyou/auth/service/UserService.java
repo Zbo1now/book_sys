@@ -7,6 +7,7 @@ import com.shuyou.auth.entity.BookReview;
 import com.shuyou.auth.entity.Booklist;
 import com.shuyou.auth.entity.UserAccount;
 import com.shuyou.auth.repository.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -18,6 +19,10 @@ import java.util.stream.Collectors;
 
 @Service
 public class UserService {
+
+  @Value("${app.upload.base-dir:./uploads}")
+  private String uploadBaseDir;
+
   private final UserAccountRepository userAccountRepository;
   private final BookReviewRepository bookReviewRepository;
   private final BooklistRepository booklistRepository;
@@ -25,6 +30,7 @@ public class UserService {
   private final ActivityRepository activityRepository;
   private final BookRepository bookRepository;
   private final UserFollowRepository userFollowRepository;
+  private final BooklistFollowRepository booklistFollowRepository;
 
   public UserService(UserAccountRepository userAccountRepository,
                      BookReviewRepository bookReviewRepository,
@@ -32,7 +38,8 @@ public class UserService {
                      ActivityParticipantRepository activityParticipantRepository,
                      ActivityRepository activityRepository,
                      BookRepository bookRepository,
-                     UserFollowRepository userFollowRepository) {
+                     UserFollowRepository userFollowRepository,
+                     BooklistFollowRepository booklistFollowRepository) {
     this.userAccountRepository = userAccountRepository;
     this.bookReviewRepository = bookReviewRepository;
     this.booklistRepository = booklistRepository;
@@ -40,6 +47,7 @@ public class UserService {
     this.activityRepository = activityRepository;
     this.bookRepository = bookRepository;
     this.userFollowRepository = userFollowRepository;
+    this.booklistFollowRepository = booklistFollowRepository;
   }
 
   public Map<String, Object> getUser(Long userId) {
@@ -98,8 +106,8 @@ public class UserService {
     String extension = original.contains(".") ? original.substring(original.lastIndexOf('.')) : ".jpg";
     String fileName = "avatar-" + user.getId() + "-" + System.currentTimeMillis() + extension;
     try {
-      java.nio.file.Path cwd = java.nio.file.Paths.get("").toAbsolutePath().normalize();
-      java.nio.file.Path uploadsDir = cwd.resolve("uploads").resolve("avatars").normalize();
+      java.nio.file.Path base = java.nio.file.Paths.get(uploadBaseDir).toAbsolutePath().normalize();
+      java.nio.file.Path uploadsDir = base.resolve("avatars").normalize();
       java.nio.file.Files.createDirectories(uploadsDir);
       java.nio.file.Path target = uploadsDir.resolve(fileName);
       java.nio.file.Files.copy(file.getInputStream(), target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
@@ -125,9 +133,7 @@ public class UserService {
       if (userFollowRepository.findByFollowerIdAndFollowingId(me.getId(), targetUserId).isEmpty()) {
         com.shuyou.auth.entity.UserFollow follow = new com.shuyou.auth.entity.UserFollow();
         follow.setFollowerId(me.getId());
-        follow.setFollowerName(me.getUsername());
         follow.setFollowingId(targetUserId);
-        follow.setFollowingName(userAccountRepository.findById(targetUserId).get().getUsername());
         follow.setCreatedAt(Instant.now());
         userFollowRepository.save(follow);
       }
@@ -149,7 +155,7 @@ public class UserService {
       map.put("cover", bl.getCoverUrl() == null ? "" : bl.getCoverUrl());
       map.put("isPublic", bl.getIsPublic());
       map.put("bookCount", bl.getBookCount());
-      map.put("followers", bl.getFollowerCount());
+      map.put("followers", (int) booklistFollowRepository.countByBooklistCode(bl.getCode()));
       map.put("rating", bl.getRating());
       return map;
     }).collect(Collectors.toList());
@@ -246,7 +252,7 @@ public class UserService {
         boolean isFollowing = currentUserId != null && userFollowRepository.findByFollowerIdAndFollowingId(currentUserId, f.getFollowingId()).isPresent();
         return Map.<String, Object>of(
           "id", "u-" + f.getFollowingId(),
-          "username", u != null ? u.getUsername() : f.getFollowingName(),
+          "username", u != null ? u.getUsername() : "未知用户",
           "avatar", u != null && u.getAvatarUrl() != null ? u.getAvatarUrl() : "",
           "title", u != null && u.getTitle() != null ? u.getTitle() : "",
           "isFollowing", isFollowing
@@ -264,7 +270,7 @@ public class UserService {
         boolean isFollowing = currentUserId != null && userFollowRepository.findByFollowerIdAndFollowingId(currentUserId, f.getFollowerId()).isPresent();
         return Map.<String, Object>of(
           "id", "u-" + f.getFollowerId(),
-          "username", u != null ? u.getUsername() : f.getFollowerName(),
+          "username", u != null ? u.getUsername() : "未知用户",
           "avatar", u != null && u.getAvatarUrl() != null ? u.getAvatarUrl() : "",
           "title", u != null && u.getTitle() != null ? u.getTitle() : "",
           "isFollowing", isFollowing

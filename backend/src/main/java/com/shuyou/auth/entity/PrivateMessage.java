@@ -21,14 +21,8 @@ public class PrivateMessage {
   @Column(name = "sender_id", nullable = false)
   private Long senderId;
 
-  @Column(name = "sender_name", length = 64)
-  private String senderName;
-
   @Column(name = "receiver_id", nullable = false)
   private Long receiverId;
-
-  @Column(name = "receiver_name", length = 64)
-  private String receiverName;
 
   @Column(nullable = false, length = 2000)
   private String content;

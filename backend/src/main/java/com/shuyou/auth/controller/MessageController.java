@@ -50,4 +50,10 @@ public class MessageController {
     UserAccount user = userAuthService.requireUser(authorization);
     return ApiResponse.ok(messageService.readAll(conversationId, user.getId()));
   }
+
+  @GetMapping("/unread-count")
+  public ApiResponse<Map<String, Object>> unreadCount(@RequestHeader(value = "Authorization", required = false) String authorization) {
+    UserAccount user = userAuthService.requireUser(authorization);
+    return ApiResponse.ok(messageService.unreadCount(user.getId()));
+  }
 }

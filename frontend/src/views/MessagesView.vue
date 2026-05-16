@@ -50,13 +50,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import MessageThread from '../components/MessageThread.vue'
 import UserAvatar from '../components/UserAvatar.vue'
 import UserInfoModal from '../components/UserInfoModal.vue'
 import { getApiData } from '../api/http'
 import { useAlert } from '../composables/useAlert'
+import { markConversationRead } from '../api/messages'
+import { useMessageUnread } from '../composables/useMessageUnread'
 
 const route = useRoute()
 
@@ -73,6 +75,7 @@ interface ThreadItem {
   initials: string
   preview: string
   status: string
+  unreadCount: number
   participantId?: string
   participantEmail?: string
   messages: MessageItem[]
@@ -86,6 +89,7 @@ interface SearchUser {
 }
 
 const { showAlert } = useAlert()
+const { setCount: setGlobalUnread, refresh: refreshGlobalUnread } = useMessageUnread()
 const threads = ref<ThreadItem[]>([])
 const activeThreadId = ref<string>('')
 const searchKeyword = ref('')
@@ -106,6 +110,7 @@ async function loadConversations() {
         initials: (item.participant?.username || '?').substring(0, 2).toUpperCase(),
         preview: item.lastMessage || '',
         status: item.unreadCount > 0 ? `未读 ${item.unreadCount}` : '在线',
+        unreadCount: item.unreadCount || 0,
         participantId: item.participant?.id,
         participantEmail: item.participant?.email,
         messages: []
@@ -120,7 +125,13 @@ async function loadConversationDetail(conversationId: string) {
   try {
     const result = await getApiData<any>(`/api/messages/conversations/${conversationId}?page=1&pageSize=50`)
     const thread = threads.value.find(t => t.id === conversationId)
-    if (thread && result.messages) {
+    if (!thread) return
+    if (result.participant?.username) {
+      thread.name = result.participant.username
+      thread.initials = result.participant.username.substring(0, 2).toUpperCase()
+      thread.participantId = result.participant.id
+    }
+    if (result.messages) {
       thread.messages = result.messages.map((msg: any) => ({
         id: msg.id,
         from: msg.sender?.id === 'me' || msg.isMine ? 'me' : 'them',
@@ -139,6 +150,14 @@ async function loadConversationDetail(conversationId: string) {
 function selectThread(threadId: string) {
   activeThreadId.value = threadId
   loadConversationDetail(threadId)
+  const thread = threads.value.find(t => t.id === threadId)
+  if (thread && thread.unreadCount > 0) {
+    markConversationRead(threadId).then((result) => {
+      thread.unreadCount = 0
+      thread.status = '在线'
+      setGlobalUnread(result.readCount)
+    }).catch(() => {})
+  }
 }
 
 async function sendMessage(content: string) {
@@ -204,19 +223,27 @@ function openUserInfo(userId: string) {
   searchResults.value = []
 }
 
-function openConversation(convId: string) {
-  const existing = threads.value.find(t => t.id === convId)
-  if (existing) {
-    activeThreadId.value = convId
-    loadConversationDetail(convId)
-    return
+async function openConversation(convId: string) {
+  let thread = threads.value.find(t => t.id === convId)
+  if (!thread) {
+    thread = {
+      id: convId,
+      name: '加载中...',
+      initials: '?',
+      preview: '',
+      status: '在线',
+      unreadCount: 0,
+      messages: []
+    }
+    threads.value.unshift(thread)
   }
   activeThreadId.value = convId
-  loadConversationDetail(convId)
+  await loadConversationDetail(convId)
 }
 
 onMounted(async () => {
   await loadConversations()
+  refreshGlobalUnread()
 
   const convParam = route.query.conv as string | undefined
   const toUserId = route.query.to as string | undefined
@@ -230,6 +257,13 @@ onMounted(async () => {
   } else if (threads.value.length > 0) {
     activeThreadId.value = threads.value[0].id
     await loadConversationDetail(threads.value[0].id)
+  }
+})
+
+watch(() => route.query.conv, (newConv) => {
+  if (newConv) {
+    const convId = String(newConv).startsWith('conv-') ? String(newConv) : 'conv-' + newConv
+    openConversation(convId)
   }
 })
 </script>

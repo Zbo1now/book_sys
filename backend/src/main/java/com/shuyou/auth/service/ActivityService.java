@@ -7,6 +7,7 @@ import com.shuyou.auth.entity.ActivityParticipant;
 import com.shuyou.auth.entity.UserAccount;
 import com.shuyou.auth.repository.ActivityParticipantRepository;
 import com.shuyou.auth.repository.ActivityRepository;
+import com.shuyou.auth.repository.UserAccountRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -34,10 +35,14 @@ public class ActivityService {
 
   private final ActivityRepository activityRepository;
   private final ActivityParticipantRepository participantRepository;
+  private final UserAccountRepository userAccountRepository;
 
-  public ActivityService(ActivityRepository activityRepository, ActivityParticipantRepository participantRepository) {
+  public ActivityService(ActivityRepository activityRepository,
+                         ActivityParticipantRepository participantRepository,
+                         UserAccountRepository userAccountRepository) {
     this.activityRepository = activityRepository;
     this.participantRepository = participantRepository;
+    this.userAccountRepository = userAccountRepository;
   }
 
   public Map<String, Object> list(int page, int pageSize, String status, Long userId) {
@@ -98,7 +103,22 @@ public class ActivityService {
         participatingCodes = Set.of(id);
       }
     }
-    return toDto(item, participatingCodes);
+    Map<String, Object> dto = toDto(item, participatingCodes);
+
+    // include participants list
+    List<ActivityParticipant> parts = participantRepository.findByActivityCode(id);
+    List<Map<String, Object>> participantList = parts.stream()
+      .map(p -> {
+        java.util.Optional<UserAccount> u = userAccountRepository.findById(p.getUserId());
+        return Map.<String, Object>of(
+          "id", "u-" + p.getUserId(),
+          "username", u.map(UserAccount::getUsername).orElse("未知用户"),
+          "avatar", u.map(ua -> ua.getAvatarUrl() != null ? ua.getAvatarUrl() : "").orElse("")
+        );
+      })
+      .toList();
+    dto.put("participants", participantList);
+    return dto;
   }
 
   public Map<String, Object> create(Long userId, String username, ActivityCreateRequest request) {
@@ -109,7 +129,6 @@ public class ActivityService {
     item.setDescription(defaultIfBlank(request.description(), ""));
     item.setCoverUrl(defaultIfBlank(request.cover(), ""));
     item.setOrganizerId(userId);
-    item.setOrganizerName(username);
     item.setStartDate(request.startDate());
     item.setEndDate(request.endDate());
     item.setLocation(request.location());
@@ -252,6 +271,12 @@ public class ActivityService {
   }
   
   private Map<String, Object> toSimpleDto(Activity item) {
+    String dynamicStatus = calculateDynamicStatus(item.getStartDate(), item.getEndDate());
+    if (!dynamicStatus.equals(item.getStatus())) {
+      item.setStatus(dynamicStatus);
+      activityRepository.save(item);
+    }
+
     Map<String, Object> dto = new LinkedHashMap<>();
     dto.put("id", item.getId());
     dto.put("code", item.getCode());
@@ -262,26 +287,33 @@ public class ActivityService {
     dto.put("participantCount", item.getParticipantCount());
     dto.put("startDate", item.getStartDate());
     dto.put("endDate", item.getEndDate());
-    dto.put("status", item.getStatus());
+    dto.put("status", dynamicStatus);
     dto.put("approvalStatus", item.getApprovalStatus());
-    dto.put("organizer", Map.of("id", item.getOrganizerId(), "username", item.getOrganizerName()));
+    dto.put("organizer", Map.of("id", item.getOrganizerId(), "username", userAccountRepository.findById(item.getOrganizerId()).map(UserAccount::getUsername).orElse("未知用户")));
     return dto;
   }
 
   private Map<String, Object> toDto(Activity item, Set<String> participatingCodes) {
+    // sync stored status with time-based status before building DTO
+    String dynamicStatus = calculateDynamicStatus(item.getStartDate(), item.getEndDate());
+    if (!dynamicStatus.equals(item.getStatus())) {
+      item.setStatus(dynamicStatus);
+      activityRepository.save(item);
+    }
+
     Map<String, Object> dto = new LinkedHashMap<>();
     dto.put("id", item.getCode());
     dto.put("title", item.getTitle());
     dto.put("description", item.getDescription() == null ? "" : item.getDescription());
     dto.put("cover", item.getCoverUrl() == null ? "" : item.getCoverUrl());
-    dto.put("organizer", Map.of("id", "u-" + item.getOrganizerId(), "username", item.getOrganizerName()));
+    dto.put("organizer", Map.of("id", "u-" + item.getOrganizerId(), "username", userAccountRepository.findById(item.getOrganizerId()).map(UserAccount::getUsername).orElse("未知用户")));
     dto.put("startDate", item.getStartDate() == null ? "" : item.getStartDate());
     dto.put("endDate", item.getEndDate() == null ? "" : item.getEndDate());
     dto.put("location", item.getLocation() == null ? "" : item.getLocation());
     dto.put("participantCount", item.getParticipantCount() == null ? 0 : item.getParticipantCount());
     dto.put("maxParticipants", item.getMaxParticipants() == null ? 0 : item.getMaxParticipants());
-    dto.put("status", item.getStatus() == null ? "upcoming" : item.getStatus());
-    dto.put("dynamicStatus", calculateDynamicStatus(item.getStartDate(), item.getEndDate()));
+    dto.put("status", dynamicStatus);
+    dto.put("dynamicStatus", dynamicStatus);
     dto.put("approvalStatus", item.getApprovalStatus() == null ? "pending" : item.getApprovalStatus());
     dto.put("activityType", item.getActivityType() == null ? "offline" : item.getActivityType());
     dto.put("schedule", List.of());

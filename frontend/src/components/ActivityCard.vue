@@ -1,5 +1,5 @@
 <template>
-  <article class="card activity-card">
+  <article class="card activity-card" @click="$router.push('/activities/' + activity.id)">
     <div class="activity-top">
       <span class="pill">{{ activity.mode }}</span>
       <span :class="statusClass">{{ statusText }}</span>
@@ -151,6 +151,16 @@ const approvalStatusClass = computed(() => {
 </script>
 
 <style scoped>
+.activity-card {
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.activity-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
 .activity-top {
   display: flex;
   align-items: flex-start;

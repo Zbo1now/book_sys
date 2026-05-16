@@ -24,10 +24,6 @@
         <h3>{{ profile.stats?.followers || 0 }}</h3>
         <span class="muted">粉丝</span>
       </div>
-      <div class="stat-item">
-        <h3>{{ profile.stats?.booklists || 0 }}</h3>
-        <span class="muted">书单</span>
-      </div>
     </div>
   </section>
 

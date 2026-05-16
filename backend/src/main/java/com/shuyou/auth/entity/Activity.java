@@ -30,9 +30,6 @@ public class Activity {
   @Column(name = "organizer_id", nullable = false)
   private Long organizerId;
 
-  @Column(name = "organizer_name", nullable = false, length = 64)
-  private String organizerName;
-
   @Column(name = "start_date", length = 64)
   private String startDate;
 

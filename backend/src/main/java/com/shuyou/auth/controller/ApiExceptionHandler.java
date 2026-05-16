@@ -9,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -30,6 +31,13 @@ public class ApiExceptionHandler {
       .orElse("请求参数错误");
     log.warn("Validation error: {}", message);
     return ApiResponse.fail(message);
+  }
+
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  @ResponseStatus(HttpStatus.BAD_REQUEST)
+  public ApiResponse<Void> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+    log.warn("Upload size exceeded: {}", ex.getMessage());
+    return ApiResponse.fail("文件大小超过限制，最大支持 2MB");
   }
 
   @ExceptionHandler(ForbiddenException.class)

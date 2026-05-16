@@ -14,7 +14,10 @@
         <RouterLink to="/booklists" class="nav-link">书单</RouterLink>
         <RouterLink to="/activities" class="nav-link">活动</RouterLink>
         <RouterLink to="/my-activities" class="nav-link">我的活动</RouterLink>
-        <RouterLink to="/messages" class="nav-link">站内信</RouterLink>
+        <RouterLink to="/messages" class="nav-link">
+            站内信
+            <span v-if="unreadCount > 0" class="unread-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+          </RouterLink>
         <RouterLink to="/profile" class="nav-link">个人中心</RouterLink>
       </nav>
       <div class="nav-actions">
@@ -32,14 +35,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useMessageUnread } from '../composables/useMessageUnread'
 import UserAvatar from './UserAvatar.vue'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const { unreadCount, refresh: refreshUnread } = useMessageUnread()
 
 const isAuthed = computed(() => authStore.isAuthed)
 
@@ -49,6 +54,12 @@ const authLink = computed(() => ({
     redirect: route.fullPath
   }
 }))
+
+onMounted(() => {
+  if (authStore.isAuthed) {
+    refreshUnread()
+  }
+})
 
 async function handleLogout() {
   authStore.logout()
@@ -77,6 +88,27 @@ async function handleLogout() {
 .nav-username {
   font-weight: 500;
   font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.nav-link {
+  position: relative;
+}
+
+.unread-badge {
+  position: absolute;
+  top: -8px;
+  right: -12px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 9px;
   white-space: nowrap;
 }
 </style>

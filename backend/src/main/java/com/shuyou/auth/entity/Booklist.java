@@ -30,20 +30,11 @@ public class Booklist {
   @Column(name = "creator_id", nullable = false)
   private Long creatorId;
 
-  @Column(name = "creator_name", nullable = false, length = 64)
-  private String creatorName;
-
   @Column(name = "book_codes", length = 2000)
   private String bookCodes;
 
   @Column(name = "book_count", nullable = false)
   private Integer bookCount = 0;
-
-  @Column(name = "follower_count", nullable = false)
-  private Integer followerCount = 0;
-
-  @Column(name = "like_count", nullable = false)
-  private Integer likeCount = 0;
 
   @Column(nullable = false)
   private Double rating = 0.0;

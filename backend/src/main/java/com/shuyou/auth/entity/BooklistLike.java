@@ -20,7 +20,4 @@ public class BooklistLike {
 
   @Column(name = "user_id", nullable = false)
   private Long userId;
-
-  @Column(name = "user_name", length = 64)
-  private String userName;
 }

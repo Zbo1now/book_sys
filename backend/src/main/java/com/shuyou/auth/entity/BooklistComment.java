@@ -21,9 +21,6 @@ public class BooklistComment {
   @Column(name = "user_id", nullable = false)
   private Long userId;
 
-  @Column(name = "username", nullable = false, length = 64)
-  private String username;
-
   @Column(name = "content", nullable = false, length = 1000)
   private String content;
 

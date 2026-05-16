@@ -16,6 +16,7 @@ export interface ActivityDto {
   dynamicStatus?: string
   isParticipating?: boolean
   approvalStatus?: string
+  activityType?: string
 }
 
 export interface CreateActivityRequest {
@@ -33,6 +34,18 @@ export async function createActivity(request: CreateActivityRequest): Promise<Ac
   return getApiData<ActivityDto>('/api/activities', {
     method: 'POST',
     body: JSON.stringify(request)
+  })
+}
+
+export async function fetchActivityDetail(id: string): Promise<ActivityDto> {
+  return getApiData<ActivityDto>(`/api/activities/${encodeURIComponent(id)}`)
+}
+
+export async function participateActivity(id: string, action: 'join' | 'leave'): Promise<{ participating: boolean; participantCount: number }> {
+  return getApiData<{ participating: boolean; participantCount: number }>(`/api/activities/${encodeURIComponent(id)}/participate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action })
   })
 }
 
