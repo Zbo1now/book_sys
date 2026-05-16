@@ -23,6 +23,11 @@ public class BookController {
     this.userAuthService = userAuthService;
   }
 
+  @GetMapping("/categories")
+  public ApiResponse<List<String>> getCategories() {
+    return ApiResponse.ok(bookService.getCategories());
+  }
+
   @GetMapping("/featured")
   public ApiResponse<Map<String, Object>> featured(@RequestParam(defaultValue = "1") int page,
                                                    @RequestParam(defaultValue = "10") int pageSize) {

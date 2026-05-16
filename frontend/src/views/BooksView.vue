@@ -41,13 +41,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import BookCard from '../components/BookCard.vue'
-import { fetchBooks } from '../api/books'
+import { fetchBooks, fetchBookCategories } from '../api/books'
 import { BOOK_CATEGORIES_WITH_ALL } from '../constants/bookCategories'
 
 const books = ref<any[]>([])
 const loading = ref(false)
 const errorMessage = ref('')
-const categories = BOOK_CATEGORIES_WITH_ALL
+const categories = ref<string[]>([...BOOK_CATEGORIES_WITH_ALL])
 const activeCategory = ref('全部')
 const searchQuery = ref('')
 
@@ -80,6 +80,12 @@ function handleSearch() {
 }
 
 onMounted(async () => {
+  try {
+    const serverCategories = await fetchBookCategories()
+    if (serverCategories.length > 0) {
+      categories.value = ['全部', ...serverCategories]
+    }
+  } catch { /* keep local fallback */ }
   await loadBooks()
 })
 </script>

@@ -78,6 +78,10 @@ export async function deleteBookReview(bookId: string, reviewId: number): Promis
   )
 }
 
+export async function fetchBookCategories(): Promise<string[]> {
+  return getApiData<string[]>('/api/books/categories')
+}
+
 export async function fetchMyBookReview(bookId: string): Promise<BookReview | null> {
   return getApiData<BookReview | null>(`/api/books/${encodeURIComponent(bookId)}/my-review`)
 }

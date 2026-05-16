@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { createAdminBook, fetchAdminBooks, updateAdminBook, deleteAdminBook, type AdminBookDto } from '../../api/admin'
+import { createAdminBook, fetchAdminBooks, fetchAdminBookCategories, updateAdminBook, deleteAdminBook, type AdminBookDto } from '../../api/admin'
 import { fetchBooks } from '../../api/books'
 import { BOOK_CATEGORIES } from '../../constants/bookCategories'
 import { useAlert } from '../../composables/useAlert'
@@ -97,8 +97,8 @@ const books = ref<AdminBook[]>([])
 const total = ref(0)
 const keyword = ref('')
 const selectedTag = ref('')
-const categories = [...BOOK_CATEGORIES]
-const createForm = ref({ title: '', author: '', tag: categories[0] })
+const categories = ref<string[]>([...BOOK_CATEGORIES])
+const createForm = ref({ title: '', author: '', tag: categories.value[0] })
 const coverFile = ref<File | null>(null)
 const errorMessage = ref('')
 
@@ -107,7 +107,7 @@ function mapBook(item: AdminBookDto): AdminBook {
     id: item.id,
     title: item.title,
     author: item.author,
-    tag: item.tag || categories[0],
+    tag: item.tag || categories.value[0],
     rating: item.rating,
     reviews: item.reviews || 0,
     cover: item.cover || '',
@@ -143,7 +143,7 @@ async function loadBooks() {
       id: item.id,
       title: item.title,
       author: item.author,
-      tag: categories.includes(item.tag as any) ? item.tag : categories[0],
+      tag: categories.value.includes(item.tag as any) ? item.tag : categories.value[0],
       rating: item.rating,
       reviews: 0,
       cover: item.cover || '',
@@ -220,7 +220,7 @@ async function createBook() {
     const created = await createAdminBook(form)
     books.value.unshift(mapBook(created))
     total.value++
-    createForm.value = { title: '', author: '', tag: categories[0] }
+    createForm.value = { title: '', author: '', tag: categories.value[0] }
     coverFile.value = null
     errorMessage.value = ''
   } catch (error: any) {
@@ -228,7 +228,15 @@ async function createBook() {
   }
 }
 
-onMounted(loadBooks)
+onMounted(async () => {
+  try {
+    const serverCategories = await fetchAdminBookCategories()
+    if (serverCategories.length > 0) {
+      categories.value = serverCategories
+    }
+  } catch { /* keep local fallback */ }
+  await loadBooks()
+})
 </script>
 
 <style scoped>

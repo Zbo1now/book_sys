@@ -28,7 +28,6 @@
         </button>
       </form>
 
-      <p class="hint">默认管理员：admin 或 admin@shuyou.com / 123456</p>
     </div>
   </section>
 </template>
@@ -131,8 +130,4 @@ input {
   font-weight: 600;
 }
 
-.hint {
-  color: var(--muted);
-  font-size: 0.9rem;
-}
 </style>

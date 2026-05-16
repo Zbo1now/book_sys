@@ -25,6 +25,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class BookService {
   private static final Logger log = LoggerFactory.getLogger(BookService.class);
   private static final String DEFAULT_COVER_URL = "/photos/default-cover.jpg";
+  private static final List<String> BOOK_CATEGORIES = List.of(
+    "文学小说", "历史传记", "计算机编程", "心理学",
+    "经济学", "少儿绘本", "科普科幻", "管理学"
+  );
   private final BookRepository bookRepository;
   private final BookReviewRepository bookReviewRepository;
   private final BookReviewLikeRepository bookReviewLikeRepository;
@@ -248,6 +252,10 @@ public class BookService {
     }
     String trimmed = value.trim();
     return trimmed.isEmpty() ? null : trimmed;
+  }
+
+  public List<String> getCategories() {
+    return BOOK_CATEGORIES;
   }
 
   private String resolveCover(String coverUrl) {
