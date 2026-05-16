@@ -37,7 +37,6 @@ CREATE TABLE `activity` (
   `location` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `max_participants` int DEFAULT NULL,
   `organizer_id` bigint NOT NULL,
-  `organizer_name` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
   `participant_count` int NOT NULL,
   `start_date` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `status` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -127,7 +126,6 @@ CREATE TABLE `book_review` (
   `rating` double NOT NULL,
   `updated_at` datetime(6) DEFAULT NULL,
   `user_id` bigint NOT NULL,
-  `user_name` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_book_review_book` (`book_code`),
   KEY `idx_book_review_user` (`user_id`)
@@ -178,11 +176,8 @@ CREATE TABLE `booklist` (
   `cover_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` datetime(6) NOT NULL,
   `creator_id` bigint NOT NULL,
-  `creator_name` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
   `description` varchar(1000) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `follower_count` int NOT NULL,
   `is_public` bit(1) NOT NULL,
-  `like_count` int NOT NULL,
   `rating` double NOT NULL,
   `title` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
   `updated_at` datetime(6) NOT NULL,
@@ -209,7 +204,6 @@ CREATE TABLE `booklist_comment` (
   `content` varchar(1000) COLLATE utf8mb4_unicode_ci NOT NULL,
   `created_at` datetime(6) NOT NULL,
   `user_id` bigint NOT NULL,
-  `username` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=857 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -251,7 +245,6 @@ CREATE TABLE `booklist_like` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `booklist_code` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
   `user_id` bigint NOT NULL,
-  `user_name` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_booklist_like` (`booklist_code`,`user_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1902 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -275,9 +268,7 @@ CREATE TABLE `private_message` (
   `created_at` datetime(6) NOT NULL,
   `is_read` bit(1) NOT NULL,
   `receiver_id` bigint NOT NULL,
-  `receiver_name` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `sender_id` bigint NOT NULL,
-  `sender_name` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_pm_sender` (`sender_id`),
   KEY `idx_pm_receiver` (`receiver_id`)
@@ -331,9 +322,7 @@ CREATE TABLE `user_follow` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `created_at` datetime(6) NOT NULL,
   `follower_id` bigint NOT NULL,
-  `follower_name` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `following_id` bigint NOT NULL,
-  `following_name` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_user_follow` (`follower_id`,`following_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
