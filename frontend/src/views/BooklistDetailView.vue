@@ -40,7 +40,7 @@
         <SectionHeader title="书单点赞者" subtitle="对该书单表达认可的用户。" />
         <p class="muted" v-if="!likedUsers.length">暂无点赞者</p>
         <div v-else class="liker-list">
-          <span class="pill" v-for="u in likedUsers" :key="u.id">{{ u.username }}</span>
+          <span class="pill clickable" v-for="u in likedUsers" :key="u.id" @click="openUserInfo(u.id)"><UserNameLink :username="u.username" :user-id="u.id" /></span>
         </div>
       </div>
 
@@ -54,7 +54,7 @@
         <p class="muted" v-if="!comments.length">暂无评论</p>
         <div v-else class="comment-list">
           <article class="comment-item" v-for="c in comments" :key="c.id">
-            <p class="comment-user">{{ c.username }}</p>
+            <p class="comment-user clickable" @click="c.userId && openUserInfo(c.userId)"><UserNameLink :username="c.username" :user-id="c.userId" /></p>
             <p class="muted">{{ c.content }}</p>
           </article>
         </div>
@@ -70,6 +70,11 @@
     @close="showBookPicker = false"
     @confirm="saveBooklistBooks"
   />
+  <UserInfoModal
+    :visible="showUserInfoModal"
+    :user-id="selectedInfoUserId"
+    @close="showUserInfoModal = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -77,6 +82,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import SectionHeader from '../components/SectionHeader.vue'
+import UserNameLink from '../components/UserNameLink.vue'
+import UserInfoModal from '../components/UserInfoModal.vue'
 import BookCard from '../components/BookCard.vue'
 import BookPickerModal from '../components/BookPickerModal.vue'
 import { createBooklistComment, fetchBooklistDetail, updateBooklist, toggleBooklistLike, toggleBooklistFollow } from '../api/booklists'
@@ -90,7 +97,15 @@ const books = ref<any[]>([])
 const allBooks = ref<Array<{ id: string; title: string; author?: string }>>([])
 const selectedBookIds = ref<string[]>([])
 const likedUsers = ref<Array<{ id: string; username: string }>>([])
-const comments = ref<Array<{ id: string; username: string; content: string }>>([])
+const comments = ref<Array<{ id: string; username: string; userId?: string; content: string }>>([])
+
+const showUserInfoModal = ref(false)
+const selectedInfoUserId = ref('')
+
+function openUserInfo(userId: string) {
+  selectedInfoUserId.value = userId
+  showUserInfoModal.value = true
+}
 const showBookPicker = ref(false)
 const commentText = ref('')
 const isAuthed = computed(() => authStore.isAuthed)
@@ -187,6 +202,14 @@ watch(() => route.params.id, load)
 </script>
 
 <style scoped>
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  opacity: 0.8;
+}
+
 .single-column {
   grid-template-columns: 1fr;
 }

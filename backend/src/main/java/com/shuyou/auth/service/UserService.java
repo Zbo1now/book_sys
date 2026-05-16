@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,20 +24,22 @@ public class UserService {
   private final ActivityParticipantRepository activityParticipantRepository;
   private final ActivityRepository activityRepository;
   private final BookRepository bookRepository;
-  private final Map<Long, Set<Long>> followMap = new ConcurrentHashMap<>();
+  private final UserFollowRepository userFollowRepository;
 
   public UserService(UserAccountRepository userAccountRepository,
                      BookReviewRepository bookReviewRepository,
                      BooklistRepository booklistRepository,
                      ActivityParticipantRepository activityParticipantRepository,
                      ActivityRepository activityRepository,
-                     BookRepository bookRepository) {
+                     BookRepository bookRepository,
+                     UserFollowRepository userFollowRepository) {
     this.userAccountRepository = userAccountRepository;
     this.bookReviewRepository = bookReviewRepository;
     this.booklistRepository = booklistRepository;
     this.activityParticipantRepository = activityParticipantRepository;
     this.activityRepository = activityRepository;
     this.bookRepository = bookRepository;
+    this.userFollowRepository = userFollowRepository;
   }
 
   public Map<String, Object> getUser(Long userId) {
@@ -82,21 +83,57 @@ public class UserService {
     );
   }
 
+  public String uploadAvatar(UserAccount user, org.springframework.web.multipart.MultipartFile file) {
+    if (file == null || file.isEmpty()) {
+      throw new IllegalArgumentException("请选择文件");
+    }
+    String contentType = file.getContentType();
+    if (contentType == null || (!contentType.equals("image/png") && !contentType.equals("image/jpeg") && !contentType.equals("image/webp"))) {
+      throw new IllegalArgumentException("仅支持 PNG、JPEG、WebP 格式");
+    }
+    if (file.getSize() > 2 * 1024 * 1024) {
+      throw new IllegalArgumentException("文件大小不能超过 2MB");
+    }
+    String original = file.getOriginalFilename() == null ? "avatar.jpg" : file.getOriginalFilename();
+    String extension = original.contains(".") ? original.substring(original.lastIndexOf('.')) : ".jpg";
+    String fileName = "avatar-" + user.getId() + "-" + System.currentTimeMillis() + extension;
+    try {
+      java.nio.file.Path cwd = java.nio.file.Paths.get("").toAbsolutePath().normalize();
+      java.nio.file.Path uploadsDir = cwd.resolve("uploads").resolve("avatars").normalize();
+      java.nio.file.Files.createDirectories(uploadsDir);
+      java.nio.file.Path target = uploadsDir.resolve(fileName);
+      java.nio.file.Files.copy(file.getInputStream(), target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+      user.setAvatarUrl("/avatars/" + fileName);
+      userAccountRepository.save(user);
+      return "/avatars/" + fileName;
+    } catch (java.io.IOException ex) {
+      throw new IllegalArgumentException("头像上传失败: " + ex.getMessage());
+    }
+  }
+
   public Map<String, Object> follow(UserAccount me, Long targetUserId, String action) {
     if (Objects.equals(me.getId(), targetUserId)) {
       throw new IllegalArgumentException("不能关注自己");
     }
     userAccountRepository.findById(targetUserId).orElseThrow(() -> new IllegalArgumentException("目标用户不存在"));
-    Set<Long> following = followMap.computeIfAbsent(me.getId(), k -> ConcurrentHashMap.newKeySet());
     boolean isFollowing;
     if ("unfollow".equalsIgnoreCase(action)) {
-      following.remove(targetUserId);
+      userFollowRepository.findByFollowerIdAndFollowingId(me.getId(), targetUserId)
+        .ifPresent(userFollowRepository::delete);
       isFollowing = false;
     } else {
-      following.add(targetUserId);
+      if (userFollowRepository.findByFollowerIdAndFollowingId(me.getId(), targetUserId).isEmpty()) {
+        com.shuyou.auth.entity.UserFollow follow = new com.shuyou.auth.entity.UserFollow();
+        follow.setFollowerId(me.getId());
+        follow.setFollowerName(me.getUsername());
+        follow.setFollowingId(targetUserId);
+        follow.setFollowingName(userAccountRepository.findById(targetUserId).get().getUsername());
+        follow.setCreatedAt(Instant.now());
+        userFollowRepository.save(follow);
+      }
       isFollowing = true;
     }
-    long followerCount = followMap.values().stream().filter(set -> set.contains(targetUserId)).count();
+    long followerCount = userFollowRepository.countByFollowingId(targetUserId);
     return Map.of("following", isFollowing, "followerCount", followerCount);
   }
 
@@ -201,24 +238,39 @@ public class UserService {
     return (seconds / (86400 * 365)) + "年前";
   }
 
-  public Map<String, Object> following(Long userId, int page, int pageSize) {
-    List<Map<String, Object>> items = List.of(Map.of(
-      "id", "u-2",
-      "username", "书友A",
-      "avatar", "avatar-url",
-      "title", "资深书迷",
-      "isFollowing", true
-    ));
+  public Map<String, Object> following(Long userId, int page, int pageSize, Long currentUserId) {
+    List<com.shuyou.auth.entity.UserFollow> follows = userFollowRepository.findByFollowerId(userId);
+    List<Map<String, Object>> items = follows.stream()
+      .map(f -> {
+        UserAccount u = userAccountRepository.findById(f.getFollowingId()).orElse(null);
+        boolean isFollowing = currentUserId != null && userFollowRepository.findByFollowerIdAndFollowingId(currentUserId, f.getFollowingId()).isPresent();
+        return Map.<String, Object>of(
+          "id", "u-" + f.getFollowingId(),
+          "username", u != null ? u.getUsername() : f.getFollowingName(),
+          "avatar", u != null && u.getAvatarUrl() != null ? u.getAvatarUrl() : "",
+          "title", u != null && u.getTitle() != null ? u.getTitle() : "",
+          "isFollowing", isFollowing
+        );
+      })
+      .collect(Collectors.toList());
     return Map.of("total", items.size(), "page", page, "pageSize", pageSize, "items", items);
   }
 
-  public Map<String, Object> followers(Long userId, int page, int pageSize) {
-    List<Map<String, Object>> items = List.of(Map.of(
-      "id", "u-100",
-      "username", "新粉丝",
-      "avatar", "avatar-url",
-      "title", "爱好读书的设计师"
-    ));
+  public Map<String, Object> followers(Long userId, int page, int pageSize, Long currentUserId) {
+    List<com.shuyou.auth.entity.UserFollow> follows = userFollowRepository.findByFollowingId(userId);
+    List<Map<String, Object>> items = follows.stream()
+      .map(f -> {
+        UserAccount u = userAccountRepository.findById(f.getFollowerId()).orElse(null);
+        boolean isFollowing = currentUserId != null && userFollowRepository.findByFollowerIdAndFollowingId(currentUserId, f.getFollowerId()).isPresent();
+        return Map.<String, Object>of(
+          "id", "u-" + f.getFollowerId(),
+          "username", u != null ? u.getUsername() : f.getFollowerName(),
+          "avatar", u != null && u.getAvatarUrl() != null ? u.getAvatarUrl() : "",
+          "title", u != null && u.getTitle() != null ? u.getTitle() : "",
+          "isFollowing", isFollowing
+        );
+      })
+      .collect(Collectors.toList());
     return Map.of("total", items.size(), "page", page, "pageSize", pageSize, "items", items);
   }
 
@@ -248,15 +300,16 @@ public class UserService {
   }
 
   private Map<String, Object> publicProfile(UserAccount user) {
-    long followingCount = followMap.getOrDefault(user.getId(), Set.of()).size();
-    long followersCount = followMap.values().stream().filter(set -> set.contains(user.getId())).count();
+    long followingCount = userFollowRepository.countByFollowerId(user.getId());
+    long followersCount = userFollowRepository.countByFollowingId(user.getId());
+    long booklistsCount = booklistRepository.countByCreatorId(user.getId());
     return Map.of(
       "id", "u-" + user.getId(),
       "username", user.getUsername(),
       "avatar", user.getAvatarUrl() == null ? "" : user.getAvatarUrl(),
       "title", user.getTitle() == null ? "城市阅读者" : user.getTitle(),
       "bio", user.getBio() == null ? "" : user.getBio(),
-      "stats", Map.of("following", followingCount, "followers", followersCount, "booklists", 0),
+      "stats", Map.of("following", followingCount, "followers", followersCount, "booklists", booklistsCount),
       "joinDate", user.getCreatedAt() == null ? "" : user.getCreatedAt().toString()
     );
   }

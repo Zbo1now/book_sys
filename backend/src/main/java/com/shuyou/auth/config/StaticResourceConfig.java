@@ -20,5 +20,9 @@ public class StaticResourceConfig implements WebMvcConfigurer {
 
     registry.addResourceHandler("/photos/**")
       .addResourceLocations(uploadsPhotos, staticPhotos);
+
+    String uploadsAvatars = cwd.resolve("uploads").resolve("avatars").toUri().toString();
+    registry.addResourceHandler("/avatars/**")
+      .addResourceLocations(uploadsAvatars);
   }
 }

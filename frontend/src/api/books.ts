@@ -35,6 +35,7 @@ export interface BookReview {
   rating: number
   content: string
   userName: string
+  userId?: string
   createdAt: string
   likeCount?: number
   liked?: boolean

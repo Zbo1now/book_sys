@@ -42,7 +42,18 @@
 					/>
 				</label>
 
-				<label class="field">
+				<label v-if="mode === 'login' && loginMethod === 'username'" class="field">
+					<span>用户名</span>
+					<input
+						v-model.trim="form.username"
+						autocomplete="username"
+						inputmode="text"
+						placeholder="请输入用户名"
+						:disabled="pending"
+					/>
+				</label>
+
+				<label v-if="mode === 'register' || (mode === 'login' && loginMethod === 'email')" class="field">
 					<span>邮箱</span>
 					<input
 						v-model.trim="form.email"
@@ -104,9 +115,19 @@
 
 				<p v-if="error" class="form-hint">{{ error }}</p>
 
-				<button type="submit" class="btn primary" :disabled="pending">
-					{{ pending ? '处理中…' : mode === 'login' ? '登录' : '注册' }}
-				</button>
+				<div class="submit-area">
+					<button
+						v-if="mode === 'login'"
+						type="button"
+						class="method-toggle"
+						@click="loginMethod = loginMethod === 'username' ? 'email' : 'username'"
+					>
+						{{ loginMethod === 'username' ? '使用邮箱登录' : '使用用户名登录' }}
+					</button>
+					<button type="submit" class="btn primary submit-btn" :disabled="pending">
+						{{ pending ? '处理中…' : mode === 'login' ? '登录' : '注册' }}
+					</button>
+				</div>
 			</form>
 
 			<p class="auth-note">
@@ -149,6 +170,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const mode = ref<Mode>('login')
+const loginMethod = ref<'username' | 'email'>('username')
 const pending = ref(false)
 const error = ref('')
 
@@ -228,7 +250,9 @@ async function refreshCaptcha() {
 
 function validate() {
 	if (mode.value === 'register' && !form.username) return '请输入用户名'
-	if (!form.email) return '请输入邮箱'
+	if (mode.value === 'login' && loginMethod.value === 'username' && !form.username) return '请输入用户名'
+	if (mode.value === 'login' && loginMethod.value === 'email' && !form.email) return '请输入邮箱'
+	if (mode.value === 'register' && !form.email) return '请输入邮箱'
 	if (!form.password) return '请输入密码'
 	if (!captcha.id) return '验证码未就绪，请刷新'
 	if (!form.captchaValue) return '请输入验证码'
@@ -247,17 +271,17 @@ async function onSubmit() {
 
 	try {
 		let resp: ApiResponse<AuthResponse>
-		const baseBody = { email: form.email, password: form.password, captchaId: captcha.id, captchaValue: form.captchaValue }
 
 		if (mode.value === 'login') {
+			const account = loginMethod.value === 'username' ? form.username : form.email
 			resp = await requestJson<AuthResponse>(buildUrl('/api/auth/login'), {
 				method: 'POST',
-				body: JSON.stringify({ ...baseBody, role: form.role })
+				body: JSON.stringify({ account, password: form.password, captchaId: captcha.id, captchaValue: form.captchaValue, role: form.role })
 			})
 		} else {
 			resp = await requestJson<AuthResponse>(buildUrl('/api/auth/register'), {
 				method: 'POST',
-				body: JSON.stringify({ ...baseBody, username: form.username })
+				body: JSON.stringify({ username: form.username, email: form.email, password: form.password, captchaId: captcha.id, captchaValue: form.captchaValue })
 			})
 		}
 
@@ -316,6 +340,32 @@ onMounted(async () => {
 .role-select:disabled {
 	opacity: 0.6;
 	cursor: not-allowed;
+}
+
+.submit-area {
+	position: relative;
+	margin-top: 0.5rem;
+}
+
+.method-toggle {
+	position: absolute;
+	top: -1.5rem;
+	right: 0;
+	background: none;
+	border: none;
+	color: var(--primary-color, #4a90a4);
+	font-size: 0.8rem;
+	cursor: pointer;
+	padding: 2px 4px;
+}
+
+.method-toggle:hover {
+	text-decoration: underline;
+	color: #357a8a;
+}
+
+.submit-btn {
+	width: 100%;
 }
 
 .captcha-row {

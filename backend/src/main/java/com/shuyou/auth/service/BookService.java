@@ -64,6 +64,7 @@ public class BookService {
     map.put("rating", review.getRating());
     map.put("content", review.getContent() == null ? "" : review.getContent());
     map.put("userName", review.getUserName() == null ? "匿名用户" : review.getUserName());
+    map.put("userId", "u-" + review.getUserId());
     map.put("createdAt", review.getCreatedAt() != null ? review.getCreatedAt().toString() : Instant.now().toString());
     map.put("likeCount", bookReviewLikeRepository.countByReviewId(review.getId()));
     return map;

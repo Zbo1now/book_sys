@@ -40,6 +40,14 @@ public class UserController {
     return ApiResponse.ok(userService.updateProfile(me, request));
   }
 
+  @PostMapping("/profile/avatar")
+  public ApiResponse<Map<String, Object>> uploadAvatar(@RequestHeader(value = "Authorization", required = false) String authorization,
+                                                        @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+    UserAccount me = userAuthService.requireUser(authorization);
+    String url = userService.uploadAvatar(me, file);
+    return ApiResponse.ok(Map.of("avatarUrl", url));
+  }
+
   @GetMapping("/{userId}/booklists")
   public ApiResponse<Map<String, Object>> userBooklists(@PathVariable String userId,
                                                          @RequestParam(defaultValue = "1") int page,
@@ -56,17 +64,21 @@ public class UserController {
   }
 
   @GetMapping("/{userId}/following")
-  public ApiResponse<Map<String, Object>> following(@PathVariable String userId,
+  public ApiResponse<Map<String, Object>> following(@RequestHeader(value = "Authorization", required = false) String authorization,
+                                                     @PathVariable String userId,
                                                      @RequestParam(defaultValue = "1") int page,
                                                      @RequestParam(defaultValue = "20") int pageSize) {
-    return ApiResponse.ok(userService.following(parseUserId(userId), page, pageSize));
+    Long currentUserId = userAuthService.optionalUser(authorization).map(UserAccount::getId).orElse(null);
+    return ApiResponse.ok(userService.following(parseUserId(userId), page, pageSize, currentUserId));
   }
 
   @GetMapping("/{userId}/followers")
-  public ApiResponse<Map<String, Object>> followers(@PathVariable String userId,
+  public ApiResponse<Map<String, Object>> followers(@RequestHeader(value = "Authorization", required = false) String authorization,
+                                                     @PathVariable String userId,
                                                      @RequestParam(defaultValue = "1") int page,
                                                      @RequestParam(defaultValue = "20") int pageSize) {
-    return ApiResponse.ok(userService.followers(parseUserId(userId), page, pageSize));
+    Long currentUserId = userAuthService.optionalUser(authorization).map(UserAccount::getId).orElse(null);
+    return ApiResponse.ok(userService.followers(parseUserId(userId), page, pageSize, currentUserId));
   }
 
   @GetMapping("/activity")

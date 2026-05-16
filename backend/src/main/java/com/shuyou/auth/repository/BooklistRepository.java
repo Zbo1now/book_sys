@@ -12,6 +12,7 @@ import java.util.Optional;
 public interface BooklistRepository extends JpaRepository<Booklist, Long> {
   Optional<Booklist> findByCode(String code);
   Page<Booklist> findByCreatorId(Long creatorId, Pageable pageable);
+  long countByCreatorId(Long creatorId);
   Page<Booklist> findByIsPublicTrue(Pageable pageable);
 
   @Query("""

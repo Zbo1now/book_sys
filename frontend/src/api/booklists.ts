@@ -64,7 +64,7 @@ export async function deleteBooklist(booklistId: string) {
 
 export async function createBooklistComment(booklistId: string, content: string) {
   const token = localStorage.getItem('auth_token') || ''
-  return getApiData<{ id: string; username: string; content: string; createdAt: string }>(
+  return getApiData<{ id: string; username: string; userId?: string; content: string; createdAt: string }>(
     `/api/booklists/${encodeURIComponent(booklistId)}/comments`,
     {
       method: 'POST',

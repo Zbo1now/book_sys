@@ -42,7 +42,7 @@ const title = computed(() => String(route.meta.title || '后台管理'))
 function handleLogout() {
   adminStore.logout()
   authStore.logout()
-  window.location.href = '/admin/login'
+  window.location.href = '/auth'
 }
 </script>
 

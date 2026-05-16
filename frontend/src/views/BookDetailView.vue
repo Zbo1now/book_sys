@@ -61,11 +61,11 @@
               <div v-for="review in displayReviews" :key="review.id" class="review-item">
                 <div class="review-header">
                   <div class="user-info">
-                    <div class="avatar-placeholder">
-                      {{ review.userName?.charAt(0)?.toUpperCase() || '?' }}
-                    </div>
+                    <span class="avatar-clickable" @click="review.userId && openUserInfo(review.userId)" :class="{ clickable: !!review.userId }">
+                      <UserAvatar :avatar-url="undefined" :username="review.userName" :size="40" />
+                    </span>
                     <div class="user-details">
-                      <span class="review-user">{{ review.userName }}</span>
+                      <UserNameLink :username="review.userName" :user-id="review.userId" />
                       <span class="review-time muted">{{ formatTime(review.createdAt) }}</span>
                     </div>
                   </div>
@@ -149,12 +149,20 @@
       </div>
     </div>
   </section>
+  <UserInfoModal
+    :visible="showUserInfoModal"
+    :user-id="selectedInfoUserId"
+    @close="showUserInfoModal = false"
+  />
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SectionHeader from '../components/SectionHeader.vue'
+import UserAvatar from '../components/UserAvatar.vue'
+import UserNameLink from '../components/UserNameLink.vue'
+import UserInfoModal from '../components/UserInfoModal.vue'
 import { fetchBookDetail, fetchBookReviews, addBookReview, likeBookReview, unlikeBookReview, deleteBookReview, type BookReview } from '../api/books'
 import { useAuthStore } from '../stores/auth'
 import { useAlert } from '../composables/useAlert'
@@ -163,6 +171,13 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const { showAlert, showConfirm } = useAlert()
+const showUserInfoModal = ref(false)
+const selectedInfoUserId = ref('')
+
+function openUserInfo(userId: string) {
+  selectedInfoUserId.value = userId
+  showUserInfoModal.value = true
+}
 const book = ref<any | null>(null)
 const reviews = ref<BookReview[]>([])
 const showReviewModal = ref(false)
@@ -318,6 +333,15 @@ watch(() => route.params.id, load)
 </script>
 
 <style scoped>
+.avatar-clickable.clickable {
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.avatar-clickable.clickable:hover {
+  opacity: 0.8;
+}
+
 .section-header-row {
   display: flex;
   justify-content: space-between;

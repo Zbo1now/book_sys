@@ -4,10 +4,36 @@
       <h1>站内信</h1>
       <p class="muted">与用户、社群及活动负责人保持沟通。</p>
     </div>
-    <button class="btn primary" @click="openNewConversation">新建会话</button>
   </section>
 
   <section class="section-block">
+    <div class="search-bar">
+      <input
+        v-model.trim="searchKeyword"
+        type="text"
+        placeholder="搜索用户..."
+        class="search-input"
+        @input="debouncedSearch"
+      />
+      <div v-if="searchResults.length > 0" class="search-dropdown">
+        <div
+          v-for="user in searchResults"
+          :key="user.id"
+          class="search-user-item"
+          @click="openUserInfo(user.id)"
+        >
+          <UserAvatar :avatar-url="user.avatar" :username="user.username" :size="36" />
+          <div>
+            <span class="search-user-name">{{ user.username }}</span>
+            <span class="search-user-title">{{ user.title || '书友' }}</span>
+          </div>
+        </div>
+      </div>
+      <div v-else-if="searchKeyword && !searching" class="search-dropdown">
+        <p class="no-results">未找到用户</p>
+      </div>
+    </div>
+
     <MessageThread
       :threads="threads"
       :active-id="activeThreadId"
@@ -16,91 +42,23 @@
     />
   </section>
 
-  <!-- 新建会话对话框 -->
-  <div v-if="showNewConversation" class="modal-overlay" @click.self="closeModal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>📨 发送私信</h3>
-        <button class="close-btn" @click="closeModal">✕</button>
-      </div>
-
-      <div class="modal-body">
-        <div v-if="!selectedUser" class="search-section">
-          <label class="section-label">搜索用户</label>
-          <div class="search-input-wrap">
-            <input
-              v-model.trim="searchKeyword"
-              type="text"
-              placeholder="输入用户名搜索..."
-              class="modal-input"
-              @input="debouncedSearch"
-            />
-            <span v-if="searching" class="search-loading">搜索中...</span>
-          </div>
-
-          <div v-if="searchResults.length > 0" class="search-results">
-            <div
-              v-for="user in searchResults"
-              :key="user.id"
-              class="user-item"
-              @click="selectUser(user)"
-            >
-              <div class="user-avatar">{{ user.username.substring(0, 2).toUpperCase() }}</div>
-              <div class="user-info">
-                <span class="user-name">{{ user.username }}</span>
-                <span class="user-title">{{ user.title || '书友' }}</span>
-              </div>
-            </div>
-          </div>
-          <div v-else-if="searchKeyword && !searching" class="no-results">
-            未找到用户
-          </div>
-        </div>
-
-        <div v-else class="message-section">
-          <div class="selected-user">
-            <span>发送给：</span>
-            <strong>{{ selectedUser.username }}</strong>
-            <button class="btn-link" @click="clearSelectedUser">更换</button>
-          </div>
-
-          <label class="section-label">消息内容</label>
-          <textarea
-            v-model.trim="newMessageContent"
-            placeholder="输入想要发送的消息..."
-            class="modal-textarea"
-            rows="4"
-          ></textarea>
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn ghost" @click="closeModal">取消</button>
-        <button
-          v-if="!selectedUser"
-          class="btn primary"
-          disabled
-        >
-          下一步
-        </button>
-        <button
-          v-else
-          class="btn primary"
-          :disabled="!newMessageContent.trim() || sending"
-          @click="sendNewMessage"
-        >
-          {{ sending ? '发送中...' : '发送' }}
-        </button>
-      </div>
-    </div>
-  </div>
+  <UserInfoModal
+    :visible="showUserInfoModal"
+    :user-id="selectedInfoUserId"
+    @close="showUserInfoModal = false"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import MessageThread from '../components/MessageThread.vue'
+import UserAvatar from '../components/UserAvatar.vue'
+import UserInfoModal from '../components/UserInfoModal.vue'
 import { getApiData } from '../api/http'
 import { useAlert } from '../composables/useAlert'
+
+const route = useRoute()
 
 interface MessageItem {
   id: string
@@ -130,13 +88,11 @@ interface SearchUser {
 const { showAlert } = useAlert()
 const threads = ref<ThreadItem[]>([])
 const activeThreadId = ref<string>('')
-const showNewConversation = ref(false)
 const searchKeyword = ref('')
 const searchResults = ref<SearchUser[]>([])
 const searching = ref(false)
-const selectedUser = ref<SearchUser | null>(null)
-const newMessageContent = ref('')
-const sending = ref(false)
+const showUserInfoModal = ref(false)
+const selectedInfoUserId = ref('')
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -154,10 +110,6 @@ async function loadConversations() {
         participantEmail: item.participant?.email,
         messages: []
       }))
-      if (threads.value.length > 0) {
-        activeThreadId.value = threads.value[0].id
-        await loadConversationDetail(threads.value[0].id)
-      }
     }
   } catch (error) {
     console.error('加载会话列表失败:', error)
@@ -216,22 +168,6 @@ async function sendMessage(content: string) {
   }
 }
 
-function openNewConversation() {
-  showNewConversation.value = true
-  searchKeyword.value = ''
-  searchResults.value = []
-  selectedUser.value = null
-  newMessageContent.value = ''
-}
-
-function closeModal() {
-  showNewConversation.value = false
-  searchKeyword.value = ''
-  searchResults.value = []
-  selectedUser.value = null
-  newMessageContent.value = ''
-}
-
 function debouncedSearch() {
   if (searchTimer) clearTimeout(searchTimer)
   if (!searchKeyword.value.trim()) {
@@ -240,11 +176,11 @@ function debouncedSearch() {
   }
   searching.value = true
   searchTimer = setTimeout(() => {
-    searchUsers()
+    doSearch()
   }, 300)
 }
 
-async function searchUsers() {
+async function doSearch() {
   if (!searchKeyword.value.trim()) {
     searchResults.value = []
     searching.value = false
@@ -261,58 +197,41 @@ async function searchUsers() {
   }
 }
 
-function selectUser(user: SearchUser) {
-  selectedUser.value = user
+function openUserInfo(userId: string) {
+  selectedInfoUserId.value = userId
+  showUserInfoModal.value = true
   searchKeyword.value = ''
   searchResults.value = []
 }
 
-function clearSelectedUser() {
-  selectedUser.value = null
-}
-
-async function sendNewMessage() {
-  if (!selectedUser.value || !newMessageContent.value.trim()) {
-    showAlert('请填写消息内容', 'warning')
+function openConversation(convId: string) {
+  const existing = threads.value.find(t => t.id === convId)
+  if (existing) {
+    activeThreadId.value = convId
+    loadConversationDetail(convId)
     return
   }
-  sending.value = true
-  try {
-    const userId = selectedUser.value.id.replace('u-', '')
-    const result = await getApiData<any>('/api/messages/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        recipientId: userId,
-        content: newMessageContent.value
-      })
-    })
-
-    threads.value.unshift({
-      id: result.conversationId || 'conv-' + userId,
-      name: selectedUser.value.username,
-      initials: selectedUser.value.username.substring(0, 2).toUpperCase(),
-      preview: newMessageContent.value,
-      status: '在线',
-      participantId: selectedUser.value.id,
-      messages: [{
-        id: result.id || 'temp-' + Date.now(),
-        from: 'me',
-        text: newMessageContent.value,
-        timestamp: result.timestamp || new Date().toISOString()
-      }]
-    })
-
-    showAlert('发送成功！', 'success')
-    closeModal()
-  } catch (error: any) {
-    showAlert(error?.message || '发送失败', 'error')
-  } finally {
-    sending.value = false
-  }
+  activeThreadId.value = convId
+  loadConversationDetail(convId)
 }
 
-onMounted(loadConversations)
+onMounted(async () => {
+  await loadConversations()
+
+  const convParam = route.query.conv as string | undefined
+  const toUserId = route.query.to as string | undefined
+
+  if (convParam) {
+    const convId = convParam.startsWith('conv-') ? convParam : 'conv-' + convParam
+    openConversation(convId)
+  } else if (toUserId) {
+    const numericId = toUserId.startsWith('u-') ? toUserId.substring(2) : toUserId
+    openConversation('conv-' + numericId)
+  } else if (threads.value.length > 0) {
+    activeThreadId.value = threads.value[0].id
+    await loadConversationDetail(threads.value[0].id)
+  }
+})
 </script>
 
 <style scoped>
@@ -328,95 +247,12 @@ onMounted(loadConversations)
   margin-bottom: 0.25rem;
 }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.modal {
-  background: white;
-  border-radius: 20px;
-  width: 440px;
-  max-width: 90vw;
-  overflow: hidden;
-  animation: slideUp 0.3s ease;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  color: #888;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.close-btn:hover {
-  background: #f0f0f0;
-  color: #333;
-}
-
-.modal-body {
-  padding: 1.25rem 1.5rem;
-}
-
-.section-label {
-  display: block;
-  margin-bottom: 0.6rem;
-  font-weight: 600;
-  color: #333;
-  font-size: 0.9rem;
-}
-
-.search-input-wrap {
+.search-bar {
   position: relative;
+  margin-bottom: 1rem;
 }
 
-.modal-input {
+.search-input {
   width: 100%;
   padding: 0.75rem 1rem;
   border: 2px solid #e8e8e8;
@@ -426,30 +262,28 @@ onMounted(loadConversations)
   box-sizing: border-box;
 }
 
-.modal-input:focus {
+.search-input:focus {
   outline: none;
   border-color: #4a90a4;
   box-shadow: 0 0 0 3px rgba(74, 144, 164, 0.1);
 }
 
-.search-loading {
+.search-dropdown {
   position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #888;
-  font-size: 0.85rem;
-}
-
-.search-results {
-  margin-top: 0.75rem;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
   border: 1px solid #e8e8e8;
   border-radius: 10px;
-  max-height: 240px;
+  background: white;
+  max-height: 260px;
   overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
-.user-item {
+.search-user-item {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -458,40 +292,22 @@ onMounted(loadConversations)
   transition: background 0.15s;
 }
 
-.user-item:hover {
+.search-user-item:hover {
   background: #f5f9fa;
 }
 
-.user-item:not(:last-child) {
+.search-user-item:not(:last-child) {
   border-bottom: 1px solid #f0f0f0;
 }
 
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #4a90a4 0%, #6bb3c4 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 600;
-  font-size: 0.85rem;
-  flex-shrink: 0;
-}
-
-.user-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.user-name {
+.search-user-name {
   font-weight: 600;
   color: #1a1a1a;
   font-size: 0.95rem;
+  display: block;
 }
 
-.user-title {
+.search-user-title {
   font-size: 0.8rem;
   color: #888;
 }
@@ -501,67 +317,6 @@ onMounted(loadConversations)
   padding: 1.5rem;
   color: #888;
   font-size: 0.9rem;
-}
-
-.selected-user {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: #f5f9fa;
-  border-radius: 10px;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-  color: #333;
-}
-
-.selected-user strong {
-  color: #4a90a4;
-}
-
-.btn-link {
-  background: none;
-  border: none;
-  color: #4a90a4;
-  cursor: pointer;
-  font-size: 0.85rem;
-  margin-left: auto;
-  text-decoration: underline;
-}
-
-.btn-link:hover {
-  color: #357a8a;
-}
-
-.modal-textarea {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 2px solid #e8e8e8;
-  border-radius: 10px;
-  font-size: 0.95rem;
-  resize: vertical;
-  min-height: 100px;
-  font-family: inherit;
-  transition: all 0.2s;
-  box-sizing: border-box;
-}
-
-.modal-textarea:focus {
-  outline: none;
-  border-color: #4a90a4;
-  box-shadow: 0 0 0 3px rgba(74, 144, 164, 0.1);
-}
-
-.modal-footer {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: flex-end;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
-  background: #fafafa;
-}
-
-.modal-footer .btn {
-  min-width: 80px;
+  margin: 0;
 }
 </style>

@@ -32,6 +32,7 @@ export interface BookDetailDto extends BookDto {
     rating: number
     content: string
     userName: string
+    userId?: string
     createdAt: string
     likeCount?: number
     liked?: boolean
@@ -52,7 +53,7 @@ export interface BooklistSummaryDto {
 export interface BooklistDetailDto extends BooklistSummaryDto {
   bookIds?: string[]
   likedUsers?: Array<{ id: string; username: string }>
-  comments?: Array<{ id: string; username: string; content: string }>
+  comments?: Array<{ id: string; username: string; userId?: string; content: string }>
   books?: Array<{
     id: string
     title: string

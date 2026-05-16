@@ -20,6 +20,10 @@
       <div class="nav-actions">
         <RouterLink v-if="!isAuthed" :to="authLink" class="btn primary">登录/注册</RouterLink>
         <template v-else>
+          <RouterLink to="/profile" class="nav-user-info">
+            <UserAvatar :avatar-url="authStore.avatarUrl" :username="authStore.username" :size="32" />
+            <span class="nav-username">{{ authStore.username }}</span>
+          </RouterLink>
           <button class="btn ghost" type="button" @click="handleLogout">退出登录</button>
         </template>
       </div>
@@ -31,6 +35,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import UserAvatar from './UserAvatar.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -52,3 +57,26 @@ async function handleLogout() {
   }
 }
 </script>
+
+<style scoped>
+.nav-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: #333;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.nav-user-info:hover {
+  background: rgba(74, 144, 164, 0.08);
+}
+
+.nav-username {
+  font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+</style>

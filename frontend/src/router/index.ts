@@ -32,6 +32,7 @@ const router = createRouter({
     { path: '/my-activities', name: 'my-activities', component: MyActivitiesView },
     { path: '/messages', name: 'messages', component: MessagesView },
     { path: '/profile', name: 'profile', component: ProfileView },
+    { path: '/user/:userId', name: 'user-profile', component: ProfileView },
     { path: '/admin/login', name: 'admin-login', component: AdminLoginView, meta: { layout: 'admin' } },
     {
       path: '/admin',
@@ -59,7 +60,7 @@ router.beforeEach((to) => {
 
   if (needsAdmin && !adminStore.isAdminAuthed && !authStore.isAdmin) {
     return {
-      name: 'admin-login',
+      name: 'auth',
       query: {
         redirect: to.fullPath
       }

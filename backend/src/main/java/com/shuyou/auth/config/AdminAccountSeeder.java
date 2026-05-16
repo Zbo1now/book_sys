@@ -7,7 +7,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
-// @Component
+@Component
 public class AdminAccountSeeder implements ApplicationRunner {
   private final UserAccountRepository userAccountRepository;
   private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();

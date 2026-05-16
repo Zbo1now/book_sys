@@ -46,7 +46,7 @@ public class AuthService {
 
   public AuthResponse login(LoginRequest request) {
     validateCaptcha(request.captchaId(), request.captchaValue());
-    UserAccount account = repository.findByEmail(request.email())
+    UserAccount account = repository.findByUsernameOrEmail(request.account(), request.account())
       .orElseThrow(() -> new IllegalArgumentException("账号或密码错误"));
     if (account.getStatus() == null || account.getStatus() != 1) {
       throw new IllegalArgumentException("账号已被禁用");

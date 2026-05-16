@@ -59,3 +59,81 @@ export async function exportProfile(): Promise<Blob> {
   }
   return response.blob()
 }
+
+export interface FollowUserItem {
+  id: string
+  username: string
+  avatar: string
+  title: string
+  isFollowing: boolean
+}
+
+export async function fetchFollowing(userId: string, page = 1, pageSize = 20): Promise<PagedResult<FollowUserItem>> {
+  const params = new URLSearchParams()
+  params.set('page', String(page))
+  params.set('pageSize', String(pageSize))
+  return getApiData<PagedResult<FollowUserItem>>(`/api/users/${encodeURIComponent(userId)}/following?${params.toString()}`)
+}
+
+export async function fetchFollowers(userId: string, page = 1, pageSize = 20): Promise<PagedResult<FollowUserItem>> {
+  const params = new URLSearchParams()
+  params.set('page', String(page))
+  params.set('pageSize', String(pageSize))
+  return getApiData<PagedResult<FollowUserItem>>(`/api/users/${encodeURIComponent(userId)}/followers?${params.toString()}`)
+}
+
+export async function followUser(userId: string): Promise<{ following: boolean; followerCount: number }> {
+  const token = localStorage.getItem('auth_token') || ''
+  return getApiData<{ following: boolean; followerCount: number }>(
+    `/api/users/${encodeURIComponent(userId)}/follow`,
+    {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: JSON.stringify({ action: 'follow' })
+    }
+  )
+}
+
+export async function unfollowUser(userId: string): Promise<{ following: boolean; followerCount: number }> {
+  const token = localStorage.getItem('auth_token') || ''
+  return getApiData<{ following: boolean; followerCount: number }>(
+    `/api/users/${encodeURIComponent(userId)}/follow`,
+    {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: JSON.stringify({ action: 'unfollow' })
+    }
+  )
+}
+
+export async function uploadAvatar(file: File): Promise<{ avatarUrl: string }> {
+  const token = localStorage.getItem('auth_token') || ''
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await fetch('/api/users/profile/avatar', {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData
+  })
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ message: '上传失败' }))
+    throw new Error((err as { message?: string }).message || '上传失败')
+  }
+  const json = await response.json() as { code: number; data: { avatarUrl: string } }
+  return json.data
+}
+
+export interface SearchUserItem {
+  id: string
+  username: string
+  avatar: string
+  title: string
+}
+
+export async function searchUsers(keyword: string, page = 1, pageSize = 20): Promise<PagedResult<SearchUserItem>> {
+  const params = new URLSearchParams()
+  params.set('keyword', keyword)
+  params.set('page', String(page))
+  params.set('pageSize', String(pageSize))
+  return getApiData<PagedResult<SearchUserItem>>(`/api/users/search?${params.toString()}`)
+}

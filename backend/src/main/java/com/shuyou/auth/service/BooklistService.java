@@ -330,12 +330,15 @@ public class BooklistService {
 
   private List<Map<String, Object>> resolveComments(String booklistCode) {
     return commentRepository.findByBooklistCodeOrderByCreatedAtDesc(booklistCode).stream()
-      .map(c -> Map.<String, Object>of(
-        "id", String.valueOf(c.getId()),
-        "username", c.getUsername(),
-        "content", c.getContent(),
-        "createdAt", c.getCreatedAt() == null ? "" : c.getCreatedAt().toString()
-      ))
+      .map(c -> {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("id", String.valueOf(c.getId()));
+        m.put("username", c.getUsername());
+        m.put("userId", "u-" + c.getUserId());
+        m.put("content", c.getContent());
+        m.put("createdAt", c.getCreatedAt() == null ? "" : c.getCreatedAt().toString());
+        return m;
+      })
       .toList();
   }
 

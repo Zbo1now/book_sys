@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-@Component
+// @Component  (已禁用：不再在启动时导入虚假测试数据)
 public class DataSeeder implements ApplicationRunner {
   private final UserAccountRepository userAccountRepository;
   private final BookRepository bookRepository;
