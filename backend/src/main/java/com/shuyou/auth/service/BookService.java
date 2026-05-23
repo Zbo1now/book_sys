@@ -126,7 +126,7 @@ public class BookService {
     return pagedData(result, safePage, safePageSize);
   }
 
-  public Map<String, Object> detail(String bookId) {
+  public Map<String, Object> detail(String bookId, Long currentUserId) {
     log.debug("Fetching book detail: {}", bookId);
     Book book = bookRepository.findByCode(bookId).orElseThrow(() -> new IllegalArgumentException("书籍不存在"));
     Map<String, Object> detail = new LinkedHashMap<>(toDto(book));
@@ -149,7 +149,7 @@ public class BookService {
     detail.put("relatedBooks", related);
 
     List<BookReview> reviews = bookReviewRepository.findByBookCodeOrderByCreatedAtDesc(bookId);
-    detail.put("reviewList", reviews.stream().map(r -> reviewToDto(r, null)).toList());
+    detail.put("reviewList", reviews.stream().map(r -> reviewToDto(r, currentUserId)).toList());
 
     return detail;
   }

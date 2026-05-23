@@ -1,11 +1,12 @@
 import type { BooklistDetailDto, BooklistSummaryDto, PagedResult } from './types'
 import { getApiData } from './http'
 
-export async function fetchBooklists(params?: { page?: number; pageSize?: number; scope?: 'hall' | 'personal' | 'all' }): Promise<PagedResult<BooklistSummaryDto>> {
+export async function fetchBooklists(params?: { page?: number; pageSize?: number; scope?: 'hall' | 'personal' | 'all'; sortBy?: string }): Promise<PagedResult<BooklistSummaryDto>> {
   const searchParams = new URLSearchParams()
   if (params?.page) searchParams.set('page', String(params.page))
   if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize))
   if (params?.scope) searchParams.set('scope', params.scope)
+  if (params?.sortBy) searchParams.set('sortBy', params.sortBy)
 
   const qs = searchParams.toString()
   const token = localStorage.getItem('auth_token') || ''

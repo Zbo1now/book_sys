@@ -48,7 +48,7 @@ public class BooklistService {
     this.userAccountRepository = userAccountRepository;
   }
 
-  public Map<String, Object> list(int page, int pageSize, String scope, UserAccount currentUser) {
+  public Map<String, Object> list(int page, int pageSize, String scope, UserAccount currentUser, String sortBy) {
     int safePage = Math.max(page, 1);
     int safePageSize = Math.max(pageSize, 1);
     String normalizedScope = scope == null ? "hall" : scope.trim().toLowerCase(Locale.ROOT);
@@ -68,7 +68,7 @@ public class BooklistService {
     }
 
     List<Booklist> content = new ArrayList<>(result.getContent());
-    if ("hall".equals(normalizedScope)) {
+    if ("hall".equals(normalizedScope) && "likes".equalsIgnoreCase(sortBy)) {
       content.sort((a, b) -> {
         long likesA = likeRepository.countByBooklistCode(a.getCode());
         long likesB = likeRepository.countByBooklistCode(b.getCode());

@@ -42,8 +42,10 @@ public class BookController {
   }
 
   @GetMapping("/{bookId}")
-  public ApiResponse<Map<String, Object>> detail(@PathVariable String bookId) {
-    return ApiResponse.ok(bookService.detail(bookId));
+  public ApiResponse<Map<String, Object>> detail(@PathVariable String bookId,
+                                                  @RequestHeader(value = "Authorization", required = false) String authorization) {
+    UserAccount me = userAuthService.optionalUser(authorization).orElse(null);
+    return ApiResponse.ok(bookService.detail(bookId, me != null ? me.getId() : null));
   }
 
   @PostMapping("/{bookId}/reviews")

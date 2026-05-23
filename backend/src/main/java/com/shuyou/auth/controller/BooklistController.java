@@ -24,9 +24,10 @@ public class BooklistController {
   public ApiResponse<Map<String, Object>> list(@RequestParam(defaultValue = "1") int page,
                                                @RequestParam(defaultValue = "12") int pageSize,
                                                @RequestParam(defaultValue = "hall") String scope,
+                                               @RequestParam(required = false) String sortBy,
                                                @RequestHeader(value = "Authorization", required = false) String authorization) {
     UserAccount me = userAuthService.optionalUser(authorization).orElse(null);
-    return ApiResponse.ok(booklistService.list(page, pageSize, scope, me));
+    return ApiResponse.ok(booklistService.list(page, pageSize, scope, me, sortBy));
   }
 
   @GetMapping("/{booklistId}")

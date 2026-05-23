@@ -8,20 +8,18 @@
         <button class="btn primary" @click="scrollToRecommendations">查看推荐</button>
       </div>
     </div>
-    <div class="hero-card">
+    <div class="hero-card" v-if="featuredList">
       <div class="hero-card-top">
         <span class="pill">推荐清单</span>
         <span class="muted">本期</span>
       </div>
-      <h2>城市夜读参考清单</h2>
-      <p class="muted">偏氛围叙事，适合稳定节奏阅读。</p>
+      <h2>{{ featuredList.title }}</h2>
+      <p class="muted">{{ featuredList.description || '来自书友的精选书单' }}</p>
       <div class="hero-card-footer">
         <div class="avatar-stack">
-          <span>AQ</span>
-          <span>JM</span>
-          <span>LS</span>
+          <span>{{ featuredList.creatorInitials }}</span>
         </div>
-        <button class="btn primary" @click="goToBooklists">进入书单</button>
+        <button class="btn primary" @click="router.push({ name: 'booklist-detail', params: { id: featuredList.id } })">进入书单</button>
       </div>
     </div>
   </section>
@@ -50,8 +48,8 @@
 
   <section class="section-block">
     <SectionHeader
-      title="热门书单"
-      subtitle="由书友与社群创建的高关注书单。"
+      title="近期书单"
+      subtitle="由书友与社群最新创建的书单。"
       action="浏览书单"
       @action="router.push({ name: 'booklists' })"
     />
@@ -97,6 +95,7 @@ const lists = ref<any[]>([])
 const activities = ref<any[]>([])
 const recommendationReason = ref('根据您的阅读偏好推荐')
 const showRecommendations = ref(false)
+const featuredList = ref<any>(null)
 const router = useRouter()
 
 function scrollToRecommendations() {
@@ -105,10 +104,6 @@ function scrollToRecommendations() {
   if (el) {
     el.scrollIntoView({ behavior: 'smooth' })
   }
-}
-
-function goToBooklists() {
-  router.push({ name: 'booklists' })
 }
 
 function formatDateTime(isoStr?: string) {
@@ -138,11 +133,24 @@ onMounted(async () => {
   }
 
   try {
-    const booklistsResult = await fetchBooklists({ page: 1, pageSize: 3 })
-    lists.value = booklistsResult.items.map((item: any) => ({
+    const [likesResult, recentResult] = await Promise.all([
+      fetchBooklists({ page: 1, pageSize: 1, scope: 'hall', sortBy: 'likes' }),
+      fetchBooklists({ page: 1, pageSize: 3, scope: 'hall', sortBy: 'recent' })
+    ])
+    if (likesResult.items.length > 0) {
+      const top = likesResult.items[0]
+      const creatorName = top.creator?.username || '平台'
+      featuredList.value = {
+        id: top.id,
+        title: top.title,
+        description: top.description || '',
+        creatorInitials: creatorName.substring(0, 2).toUpperCase()
+      }
+    }
+    lists.value = recentResult.items.map((item: any) => ({
       id: item.id,
       title: item.title,
-      curator: `创建者：${item.curator?.username || '平台'}`,
+      curator: `创建者：${item.creator?.username || '平台'}`,
       description: item.description || '',
       visibility: item.isPublic ? '公开' : '私密',
       books: item.bookCount || 0,
