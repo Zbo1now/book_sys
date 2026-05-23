@@ -74,7 +74,6 @@ interface ThreadItem {
   name: string
   initials: string
   preview: string
-  status: string
   unreadCount: number
   participantId?: string
   participantEmail?: string
@@ -109,7 +108,6 @@ async function loadConversations() {
         name: item.participant?.username || '未知用户',
         initials: (item.participant?.username || '?').substring(0, 2).toUpperCase(),
         preview: item.lastMessage || '',
-        status: item.unreadCount > 0 ? `未读 ${item.unreadCount}` : '在线',
         unreadCount: item.unreadCount || 0,
         participantId: item.participant?.id,
         participantEmail: item.participant?.email,
@@ -154,7 +152,6 @@ function selectThread(threadId: string) {
   if (thread && thread.unreadCount > 0) {
     markConversationRead(threadId).then((result) => {
       thread.unreadCount = 0
-      thread.status = '在线'
       setGlobalUnread(result.readCount)
     }).catch(() => {})
   }
@@ -231,7 +228,6 @@ async function openConversation(convId: string) {
       name: '加载中...',
       initials: '?',
       preview: '',
-      status: '在线',
       unreadCount: 0,
       messages: []
     }

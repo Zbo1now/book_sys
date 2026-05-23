@@ -24,7 +24,6 @@
         <div class="thread-header">
           <div>
             <p class="thread-name">{{ activeThread.name }}</p>
-            <p class="muted">{{ activeThread.status }}</p>
           </div>
           <button v-if="activeThread.participantId" class="btn ghost small" @click="viewProfile">查看档案</button>
         </div>
@@ -73,7 +72,6 @@ interface ThreadItem {
   name: string
   initials: string
   preview: string
-  status: string
   unreadCount?: number
   messages: MessageItem[]
   participantId?: string
