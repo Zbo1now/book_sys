@@ -56,15 +56,17 @@ public class BookService {
     return map;
   }
 
-  private Map<String, Object> reviewToDto(BookReview review) {
+  private Map<String, Object> reviewToDto(BookReview review, Long currentUserId) {
     Map<String, Object> map = new LinkedHashMap<>();
     map.put("id", review.getId());
     map.put("rating", review.getRating());
     map.put("content", review.getContent() == null ? "" : review.getContent());
     map.put("userName", userAccountRepository.findById(review.getUserId()).map(UserAccount::getUsername).orElse("匿名用户"));
     map.put("userId", "u-" + review.getUserId());
+    map.put("avatarUrl", userAccountRepository.findById(review.getUserId()).map(u -> u.getAvatarUrl() == null ? "" : u.getAvatarUrl()).orElse(""));
     map.put("createdAt", review.getCreatedAt() != null ? review.getCreatedAt().toString() : Instant.now().toString());
     map.put("likeCount", bookReviewLikeRepository.countByReviewId(review.getId()));
+    map.put("liked", currentUserId != null && bookReviewLikeRepository.findByReviewIdAndUserId(review.getId(), currentUserId).isPresent());
     return map;
   }
 
@@ -147,7 +149,7 @@ public class BookService {
     detail.put("relatedBooks", related);
 
     List<BookReview> reviews = bookReviewRepository.findByBookCodeOrderByCreatedAtDesc(bookId);
-    detail.put("reviewList", reviews.stream().map(this::reviewToDto).toList());
+    detail.put("reviewList", reviews.stream().map(r -> reviewToDto(r, null)).toList());
 
     return detail;
   }
@@ -160,45 +162,39 @@ public class BookService {
     UserAccount user = userAccountRepository.findById(userId)
       .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
 
-    List<BookReview> existingReviews = bookReviewRepository.findByBookCodeAndUserId(bookId, userId);
-    BookReview review = existingReviews.isEmpty() ? new BookReview() : existingReviews.get(0);
-    if (existingReviews.isEmpty()) {
-      review.setBookCode(bookId);
-      review.setUserId(userId);
-    }
-
+    BookReview review = new BookReview();
+    review.setBookCode(bookId);
+    review.setUserId(userId);
     review.setRating(rating);
     review.setContent(content);
+    review.setCreatedAt(Instant.now());
     review.setUpdatedAt(Instant.now());
-    if (review.getCreatedAt() == null) {
-      review.setCreatedAt(Instant.now());
-    }
 
     bookReviewRepository.save(review);
 
     updateBookRating(bookId);
 
-    Map<String, Object> result = reviewToDto(review);
+    Map<String, Object> result = reviewToDto(review, userId);
     log.info("Review saved and returning: {}", result);
     return result;
   }
 
-  public List<Map<String, Object>> getReviews(String bookId, int page, int pageSize, String sortBy) {
+  public List<Map<String, Object>> getReviews(String bookId, int page, int pageSize, String sortBy, Long currentUserId) {
     int safePage = Math.max(page, 1);
     int safePageSize = Math.max(pageSize, 1);
-    
-    Sort sort = "hot".equalsIgnoreCase(sortBy) 
+
+    Sort sort = "hot".equalsIgnoreCase(sortBy)
       ? Sort.by(Sort.Direction.DESC, "rating", "createdAt")
       : Sort.by(Sort.Direction.DESC, "createdAt");
-    
+
     Pageable pageable = PageRequest.of(safePage - 1, safePageSize, sort);
     Page<BookReview> reviews = bookReviewRepository.findByBookCode(bookId, pageable);
-    return reviews.getContent().stream().map(this::reviewToDto).toList();
+    return reviews.getContent().stream().map(r -> reviewToDto(r, currentUserId)).toList();
   }
 
   public Map<String, Object> getUserReview(Long userId, String bookId) {
     List<BookReview> reviews = bookReviewRepository.findByBookCodeAndUserId(bookId, userId);
-    return reviews.isEmpty() ? null : reviewToDto(reviews.get(0));
+    return reviews.isEmpty() ? null : reviewToDto(reviews.get(0), userId);
   }
 
   @Transactional

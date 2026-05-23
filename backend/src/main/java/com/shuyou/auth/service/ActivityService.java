@@ -281,7 +281,7 @@ public class ActivityService {
     }
 
     Map<String, Object> dto = new LinkedHashMap<>();
-    dto.put("id", item.getId());
+    dto.put("id", item.getCode());
     dto.put("code", item.getCode());
     dto.put("title", item.getTitle());
     dto.put("description", item.getDescription());

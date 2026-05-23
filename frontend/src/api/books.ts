@@ -36,6 +36,7 @@ export interface BookReview {
   content: string
   userName: string
   userId?: string
+  avatarUrl?: string
   createdAt: string
   likeCount?: number
   liked?: boolean

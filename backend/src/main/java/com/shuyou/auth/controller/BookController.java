@@ -58,8 +58,10 @@ public class BookController {
   public ApiResponse<List<Map<String, Object>>> getReviews(@PathVariable String bookId,
                                                             @RequestParam(defaultValue = "1") int page,
                                                             @RequestParam(defaultValue = "10") int pageSize,
-                                                            @RequestParam(required = false) String sortBy) {
-    return ApiResponse.ok(bookService.getReviews(bookId, page, pageSize, sortBy));
+                                                            @RequestParam(required = false) String sortBy,
+                                                            @RequestHeader(value = "Authorization", required = false) String authorization) {
+    UserAccount me = userAuthService.optionalUser(authorization).orElse(null);
+    return ApiResponse.ok(bookService.getReviews(bookId, page, pageSize, sortBy, me != null ? me.getId() : null));
   }
 
   @PostMapping("/{bookId}/reviews/{reviewId}/like")

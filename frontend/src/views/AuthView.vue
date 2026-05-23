@@ -130,9 +130,6 @@
 				</div>
 			</form>
 
-			<p class="auth-note">
-				{{ apiBaseHint }}
-			</p>
 		</div>
 	</section>
 </template>
@@ -176,7 +173,6 @@ const error = ref('')
 
 
 const apiBase = ((import.meta as any).env?.VITE_API_BASE_URL as string | undefined) || 'http://localhost:8080'
-const apiBaseHint = computed(() => `后端地址：${apiBase}`)
 
 const captcha = reactive<{ id: string; code: string; imageBase64: string }>({ id: '', code: '', imageBase64: '' })
 

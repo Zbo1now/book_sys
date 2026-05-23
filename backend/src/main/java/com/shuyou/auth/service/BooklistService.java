@@ -64,13 +64,31 @@ public class BooklistService {
         PageRequest.of(safePage - 1, safePageSize, Sort.by(Sort.Direction.DESC, "updatedAt")));
     } else {
       result = booklistRepository.findByIsPublicTrue(
-        PageRequest.of(safePage - 1, safePageSize, Sort.by(Sort.Direction.DESC, "updatedAt")));
+        PageRequest.of(safePage - 1, safePageSize, Sort.by(Sort.Direction.DESC, "createdAt")));
     }
+
+    List<Booklist> content = new ArrayList<>(result.getContent());
+    if ("hall".equals(normalizedScope)) {
+      content.sort((a, b) -> {
+        long likesA = likeRepository.countByBooklistCode(a.getCode());
+        long likesB = likeRepository.countByBooklistCode(b.getCode());
+        if (likesB != likesA) {
+          return Long.compare(likesB, likesA);
+        }
+        var ta = a.getCreatedAt();
+        var tb = b.getCreatedAt();
+        if (ta != null && tb != null) {
+          return tb.compareTo(ta);
+        }
+        return 0;
+      });
+    }
+
     return Map.of(
       "total", result.getTotalElements(),
       "page", safePage,
       "pageSize", safePageSize,
-      "items", result.getContent().stream().map(this::toSummaryDto).toList()
+      "items", content.stream().map(this::toSummaryDto).toList()
     );
   }
 

@@ -62,7 +62,7 @@
                 <div class="review-header">
                   <div class="user-info">
                     <span class="avatar-clickable" @click="review.userId && openUserInfo(review.userId)" :class="{ clickable: !!review.userId }">
-                      <UserAvatar :avatar-url="undefined" :username="review.userName" :size="40" />
+                      <UserAvatar :avatar-url="review.avatarUrl || undefined" :username="review.userName" :size="40" />
                     </span>
                     <div class="user-details">
                       <UserNameLink :username="review.userName" :user-id="review.userId" />

@@ -164,6 +164,7 @@ async function load() {
     activity.value = await fetchActivityDetail(id)
   } catch (error: any) {
     console.error('加载活动详情失败:', error)
+    activity.value = { ...activity.value, title: '活动不存在或加载失败', description: error?.message || '' }
   }
 }
 
