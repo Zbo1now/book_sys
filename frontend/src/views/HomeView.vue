@@ -154,8 +154,8 @@ onMounted(async () => {
       description: item.description || '',
       visibility: item.isPublic ? '公开' : '私密',
       books: item.bookCount || 0,
-      likes: item.likeCount || 0,
-      saves: item.followerCount || 0
+      likes: item.likes || 0,
+      saves: item.followers || 0
     }))
   } catch (error) {
     console.error('加载书单失败:', error)
